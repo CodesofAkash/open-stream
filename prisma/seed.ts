@@ -1,8 +1,19 @@
 // prisma/seed.ts - COMPLETE UPDATED SEED
 
+import { config } from "dotenv";
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-const prisma = new PrismaClient();
+// Prisma 7 needs a driver adapter and no longer reads .env itself, so a bare
+// `new PrismaClient()` throws before the first query. Seeding writes a lot of
+// rows, so it goes over the direct (non-pooled) connection when there is one.
+config({ path: ".env", quiet: true });
+
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({
+    connectionString: process.env.DIRECT_DATABASE_URL ?? process.env.DATABASE_URL,
+  }),
+});
 
 async function main() {
   console.log("🌱 Starting comprehensive seed...");

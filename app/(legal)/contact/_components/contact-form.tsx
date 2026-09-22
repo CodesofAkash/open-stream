@@ -56,6 +56,9 @@ export const ContactForm = ({ title, description }: Props) => {
           subject: formData.subject,
           message: formData.message,
           to_name: "Akash Sharma",
+          // The template's Reply-To is {{reply_to}}; without this, replying to
+          // a contact email goes back to yourself instead of the sender.
+          reply_to: formData.email,
         },
         publicKey
       );
