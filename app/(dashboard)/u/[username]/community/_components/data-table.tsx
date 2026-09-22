@@ -3,15 +3,11 @@
 import * as React from "react"
 
 import {
-  ColumnDef,
-  ColumnFiltersState,
-  SortingState,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  useReactTable,
-  getSortedRowModel,
-  getPaginationRowModel
+  type ColumnDef,
+  type ColumnFiltersState,
+  type RowData,
+  type SortingState,
+  useTable,
 } from "@tanstack/react-table"
 
 import {
@@ -26,28 +22,32 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
+import { communityTableFeatures, type CommunityTableFeatures } from "./table-features"
+
+/**
+ * TanStack Table v9.
+ *
+ * Three things changed from v8 and all of them are load-bearing:
+ *  - `useReactTable` is `useTable`, and it takes an explicit `features` set.
+ *  - Row models are no longer passed as options; each declared feature falls
+ *    back to its own built-in factory.
+ *  - `flexRender(def, ctx)` is now `<table.FlexRender header|cell={…} />`.
+ */
+interface DataTableProps<TData extends RowData> {
+  columns: ColumnDef<CommunityTableFeatures, TData, unknown>[]
   data: TData[]
 }
 
-export function DataTable<TData, TValue>({
-  columns,
-  data,
-}: DataTableProps<TData, TValue>) {
-
+export function DataTable<TData extends RowData>({ columns, data }: DataTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
 
-  const table = useReactTable({
+  const table = useTable({
+    features: communityTableFeatures,
     data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
-    getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
       columnFilters,
@@ -60,7 +60,9 @@ export function DataTable<TData, TValue>({
         <Input
           placeholder="Filter users..."
           value={(table.getColumn("username")?.getFilterValue() as string) ?? ""}
-          onChange={(event) => table.getColumn("username")?.setFilterValue(event.target.value)}
+          onChange={(event) =>
+            table.getColumn("username")?.setFilterValue(event.target.value)
+          }
           className="max-w-sm"
         />
       </div>
@@ -69,31 +71,21 @@ export function DataTable<TData, TValue>({
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  )
-                })}
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder ? null : <table.FlexRender header={header} />}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
+                <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      <table.FlexRender cell={cell} />
                     </TableCell>
                   ))}
                 </TableRow>
