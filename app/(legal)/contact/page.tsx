@@ -1,217 +1,116 @@
-"use client";
+import { Metadata } from "next";
+import { Mail, MessageSquare, Send } from "lucide-react";
 
-import { useState, FormEvent } from "react";
-import { Mail, MessageSquare, Github, Send, Loader2 } from "lucide-react";
+import { Github } from "@/components/icons/github";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Heading } from "@/components/sanity/heading";
+import { CmsCta } from "@/components/sanity/cms-link";
 import { contentConfig } from "@/lib/content-config";
-import emailjs from "@emailjs/browser";
-import { toast } from "sonner";
+import { getContactPage } from "@/sanity/pages";
+import { buildPageMetadata } from "@/sanity/seo";
+import { getSiteSettings } from "@/sanity/settings";
 
-export default function ContactPage() {
-  const { contact, project } = contentConfig;
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    subject: "",
-    message: "",
+import { ContactForm } from "./_components/contact-form";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const [page, settings] = await Promise.all([getContactPage(), getSiteSettings()]);
+
+  return buildPageMetadata({
+    seo: page?.seo,
+    settings,
+    fallbackTitle: contentConfig.contact.title,
+    fallbackDescription: contentConfig.contact.description,
+    path: "/contact",
   });
+}
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
+/** The icon shown on each shipped contact card, by position. */
+const FALLBACK_ICONS = [Mail, MessageSquare, Github];
 
-    try {
-      const serviceId = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID || "service_s3inyje";
-      const templateId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID || "template_neayvk7";
-      const publicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY || "eFGhotqAWABe54T";
-      await emailjs.send(
-        serviceId,
-        templateId,
-        {
-          from_name: formData.name,
-          from_email: formData.email,
-          subject: formData.subject,
-          message: formData.message,
-          to_name: "Akash Sharma",
-        },
-        publicKey
-      );
+export default async function ContactPage() {
+  const { contact } = contentConfig;
+  const page = await getContactPage();
 
-      toast.success("Message sent successfully! We'll get back to you soon.");
-      
-      // Reset form
-      setFormData({
-        name: "",
-        email: "",
-        subject: "",
-        message: "",
-      });
-    } catch (error) {
-      console.error("Email send error:", error);
-      toast.error("Failed to send message. Please try again or contact us directly via email.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const heading = page?.heading?.length
+    ? page.heading
+    : [{ text: contact.hero.title, style: "default", tag: "h1" }];
+  const intro = page?.intro ?? contact.hero.subtitle;
+  const formTitle = page?.formTitle ?? contact.form.title;
+  const formDescription = page?.formDescription ?? contact.form.description;
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { id, value } = e.target;
-    setFormData((prev) => ({ ...prev, [id]: value }));
-  };
   return (
     <article className="space-y-12">
       {/* Hero */}
       <header className="text-center space-y-4">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-          <Send className="w-8 h-8 text-primary" />
+        <div className="inline-flex items-center justify-center size-16 rounded-full bg-primary/10 mb-4">
+          <Send className="size-8 text-primary" />
         </div>
-        <h1 className="text-4xl font-bold">{contact.hero.title}</h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          {contact.hero.subtitle}
-        </p>
+        <Heading segments={heading} sizeClassName="text-4xl font-bold" />
+        {intro ? (
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{intro}</p>
+        ) : null}
       </header>
 
-      {/* Contact Methods */}
+      {/* Contact methods */}
       <div className="grid md:grid-cols-3 gap-6">
-        <Card className="hover:border-primary/50 transition-all hover:shadow-md">
-          <CardHeader className="text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mx-auto mb-4">
-              <Mail className="w-6 h-6 text-primary" />
-            </div>
-            <CardTitle>{contact.methods[0].title}</CardTitle>
-            <CardDescription>{contact.methods[0].description}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <a
-              href={contact.methods[0].link}
-              className="text-primary hover:underline font-medium"
-            >
-              {contact.methods[0].linkText}
-            </a>
-          </CardContent>
-        </Card>
+        {page?.methods?.length
+          ? page.methods.map((method, index) => (
+              <Card
+                key={index}
+                className="hover:border-primary/50 transition-all hover:shadow-md"
+              >
+                <CardHeader className="text-center">
+                  <CardTitle>{method.title}</CardTitle>
+                  {method.description ? (
+                    <CardDescription>{method.description}</CardDescription>
+                  ) : null}
+                </CardHeader>
+                {method.cta ? (
+                  <CardContent className="text-center">
+                    <CmsCta cta={method.cta} className="w-full" />
+                  </CardContent>
+                ) : null}
+              </Card>
+            ))
+          : contact.methods.map((method, index) => {
+              const Icon = FALLBACK_ICONS[index] ?? Mail;
+              const isPlainLink = "linkText" in method;
 
-        <Card className="hover:border-primary/50 transition-all hover:shadow-md">
-          <CardHeader className="text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mx-auto mb-4">
-              <MessageSquare className="w-6 h-6 text-primary" />
-            </div>
-            <CardTitle>{contact.methods[1].title}</CardTitle>
-            <CardDescription>{contact.methods[1].description}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <Button variant="outline" asChild className="w-full">
-              <a href={contact.methods[1].link} target="_blank" rel="noopener noreferrer">
-                {contact.methods[1].buttonText}
-              </a>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:border-primary/50 transition-all hover:shadow-md">
-          <CardHeader className="text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mx-auto mb-4">
-              <Github className="w-6 h-6 text-primary" />
-            </div>
-            <CardTitle>{contact.methods[2].title}</CardTitle>
-            <CardDescription>{contact.methods[2].description}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <Button variant="outline" asChild className="w-full">
-              <a href={contact.methods[2].link} target="_blank" rel="noopener noreferrer">
-                {contact.methods[2].buttonText}
-              </a>
-            </Button>
-          </CardContent>
-        </Card>
+              return (
+                <Card
+                  key={method.title}
+                  className="hover:border-primary/50 transition-all hover:shadow-md"
+                >
+                  <CardHeader className="text-center">
+                    <div className="inline-flex items-center justify-center size-12 rounded-full bg-primary/10 mx-auto mb-4">
+                      <Icon className="size-6 text-primary" />
+                    </div>
+                    <CardTitle>{method.title}</CardTitle>
+                    <CardDescription>{method.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="text-center">
+                    {isPlainLink ? (
+                      <a
+                        href={method.link}
+                        className="text-primary hover:underline font-medium"
+                      >
+                        {(method as { linkText: string }).linkText}
+                      </a>
+                    ) : (
+                      <Button variant="outline" asChild className="w-full">
+                        <a href={method.link} target="_blank" rel="noopener noreferrer">
+                          {(method as { buttonText: string }).buttonText}
+                        </a>
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
       </div>
 
-      {/* Contact Form */}
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-2xl">{contact.form.title}</CardTitle>
-          <CardDescription>{contact.form.description}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">{contact.form.fields.name.label} *</Label>
-                <Input 
-                  id="name" 
-                  placeholder={contact.form.fields.name.placeholder} 
-                  className="h-11"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">{contact.form.fields.email.label} *</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder={contact.form.fields.email.placeholder} 
-                  className="h-11"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="subject">{contact.form.fields.subject.label} *</Label>
-              <Input 
-                id="subject" 
-                placeholder={contact.form.fields.subject.placeholder} 
-                className="h-11"
-                value={formData.subject}
-                onChange={handleInputChange}
-                required
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="message">{contact.form.fields.message.label} *</Label>
-              <Textarea
-                id="message"
-                placeholder={contact.form.fields.message.placeholder}
-                rows={contact.form.fields.message.rows}
-                className="resize-none"
-                value={formData.message}
-                onChange={handleInputChange}
-                required
-                disabled={isLoading}
-              />
-            </div>
-
-            <Button type="submit" className="w-full h-11" size="lg" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" />
-                  {contact.form.submitButton}
-                </>
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      <ContactForm title={formTitle} description={formDescription} />
     </article>
   );
 }

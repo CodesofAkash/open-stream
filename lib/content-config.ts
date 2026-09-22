@@ -1,9 +1,12 @@
 // Centralized content configuration for legal pages and features
+import { SITE_URL } from "@/lib/site-url";
+
 export const contentConfig = {
   // Project metadata
   project: {
     name: "OpenStream",
-    baseUrl: "https://open-stream--codesofakash.vercel.app",
+    // Derived from the deployment, never hardcoded — see lib/site-url.ts.
+    baseUrl: SITE_URL,
     githubUrl: "https://github.com/CodesofAkash/open-stream",
     email: {
       support: "akashcodesharma@gmail.com",
@@ -30,7 +33,7 @@ export const contentConfig = {
     techStack: {
       title: "Technology Stack",
       items: [
-        { name: "Next.js 15", description: "React framework with App Router" },
+        { name: "Next.js 16", description: "React framework with App Router" },
         { name: "LiveKit", description: "Real-time video streaming" },
         { name: "Clerk", description: "Authentication & user management" },
         { name: "Prisma", description: "Type-safe database ORM" },

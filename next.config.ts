@@ -29,55 +29,39 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
 
-  webpack: (config, { isServer }) => {
-    config.externals.push({
-      "utf-8-validate": "commonjs utf-8-validate",
-      bufferutil: "commonjs bufferutil",
-    });
-
-    // Optimize bundle size
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-      };
-    }
-
-    return config;
-  },
+  // Next 16 builds with Turbopack. The old webpack block (ws optional native
+  // deps as externals, fs/net/tls fallbacks) is handled by Turbopack directly,
+  // and a webpack config it never reads is worse than none.
+  turbopack: {},
 
   async headers() {
+    // Access-Control-Allow-Origin: "*" together with Allow-Credentials: true is
+    // both invalid (browsers ignore the pair) and a standing invitation on the
+    // webhook routes. Nothing here is a public cross-origin API, so CORS is
+    // simply not advertised; same-origin requests never needed it.
     return [
       {
         source: "/:path*",
         headers: [
-          { key: "Access-Control-Allow-Credentials", value: "true" },
-          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
-            key: "Access-Control-Allow-Methods",
-            value: "GET,DELETE,PATCH,POST,PUT",
+            key: "Permissions-Policy",
+            // The app legitimately uses camera, microphone and screen capture
+            // for streaming, so those stay enabled for our own origin.
+            value:
+              "camera=(self), microphone=(self), display-capture=(self), geolocation=(), interest-cohort=()",
           },
           {
-            key: "Access-Control-Allow-Headers",
-            value:
-              "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
           },
         ],
       },
     ];
   },
 
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-
-  output: "standalone", // THIS IS THE KEY LINE
 };
 
 export default nextConfig;

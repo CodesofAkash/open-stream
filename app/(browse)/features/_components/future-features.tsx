@@ -1,5 +1,6 @@
 import { futureFeatures } from "@/lib/features-data";
 import { contentConfig } from "@/lib/content-config";
+import type { FeaturesPage } from "@/sanity/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Clock, Zap, Lightbulb } from "lucide-react";
@@ -32,41 +33,57 @@ const statusConfig = {
   Future: "bg-gray-500/15 text-gray-600 dark:text-gray-400 border-gray-500/30",
 };
 
-export const FutureFeatures = () => {
+type Props = {
+  title?: string | null;
+  subtitle?: string | null;
+  groups?: FeaturesPage["roadmapGroups"];
+};
+
+export const FutureFeatures = ({ title, subtitle, groups }: Props) => {
   const { features } = contentConfig;
+
+  const heading = title ?? features.futureFeatures.title;
+  const intro = subtitle ?? features.futureFeatures.subtitle;
+  const bands = groups?.length ? groups : futureFeatures;
 
   return (
     <section className="mb-20">
       <div className="text-center mb-12">
-        <h2 className="text-3xl font-bold mb-3">{features.futureFeatures.title}</h2>
+        <h2 className="text-3xl font-bold mb-3">{heading}</h2>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          {features.futureFeatures.subtitle}
+          {intro}
         </p>
       </div>
       
       <div className="space-y-12">
-        {futureFeatures.map((priorityGroup) => {
-          const config = priorityConfig[priorityGroup.priority as keyof typeof priorityConfig];
+        {bands.map((priorityGroup) => {
+          // An unknown priority from the CMS must not crash the page.
+          const config =
+            priorityConfig[priorityGroup.priority as keyof typeof priorityConfig] ??
+            priorityConfig.Future;
           const Icon = config.icon;
+          const blurb =
+            ("blurb" in priorityGroup ? priorityGroup.blurb : null) ??
+            features.futureFeatures.priorities[
+              priorityGroup.priority as keyof typeof features.futureFeatures.priorities
+            ];
           
           return (
             <div key={priorityGroup.priority}>
               <div className="flex items-center gap-3 mb-6">
                 <div className={`p-2 rounded-lg ${config.bgColor}`}>
-                  <Icon className={`w-5 h-5 ${config.color}`} />
+                  <Icon className={`size-5 ${config.color}`} />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold">
                     {priorityGroup.priority} Priority
                   </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {features.futureFeatures.priorities[priorityGroup.priority as keyof typeof features.futureFeatures.priorities]}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{blurb}</p>
                 </div>
               </div>
               
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {priorityGroup.features.map((feature) => (
+                {(priorityGroup.features ?? []).map((feature) => (
                   <Card
                     key={feature.name}
                     className="border-muted hover:border-primary/50 transition-all hover:shadow-md group"
@@ -76,12 +93,14 @@ export const FutureFeatures = () => {
                         <CardTitle className="text-base group-hover:text-primary transition-colors">
                           {feature.name}
                         </CardTitle>
-                        <Badge
-                          variant="outline"
-                          className={`text-xs ${statusConfig[feature.status as keyof typeof statusConfig]}`}
-                        >
-                          {feature.status}
-                        </Badge>
+                        {"status" in feature && feature.status ? (
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${statusConfig[feature.status as keyof typeof statusConfig]}`}
+                          >
+                            {feature.status}
+                          </Badge>
+                        ) : null}
                       </div>
                       <CardDescription className="text-xs leading-relaxed">
                         {feature.description}
