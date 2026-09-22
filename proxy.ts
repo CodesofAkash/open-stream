@@ -15,13 +15,12 @@ const isPublicRoute = createRouteMatcher([
   '/__clerk(.*)',
 ])
 
-// The production Clerk instance is configured to proxy through /__clerk, which
-// is how a *.vercel.app domain (no DNS records of its own) gets a first-party
-// Clerk. The development instance talks to Clerk directly, so the proxy is
-// switched on only for live keys.
-const isProductionInstance = (
-  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? ''
-).startsWith('pk_live_')
+// Proxying Clerk through /__clerk is only needed on a domain that cannot have
+// its own DNS records — a *.vercel.app subdomain. On a real domain Clerk uses
+// CNAMEs instead, which is the better setup, so the proxy follows the presence
+// of NEXT_PUBLIC_CLERK_PROXY_URL: set it and the proxy runs, remove it and
+// Clerk is reached directly. Nothing to redeploy differently either way.
+const proxyUrl = process.env.NEXT_PUBLIC_CLERK_PROXY_URL
 
 export default clerkMiddleware(
   async (auth, req) => {
@@ -30,7 +29,7 @@ export default clerkMiddleware(
     }
   },
   {
-    frontendApiProxy: { enabled: isProductionInstance },
+    frontendApiProxy: { enabled: Boolean(proxyUrl) },
   },
 )
 
