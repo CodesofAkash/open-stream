@@ -119,6 +119,7 @@ export type Feature = {
   name?: string | null;
   description?: string | null;
   tech?: string[] | null;
+  status?: string | null;
 };
 
 export type FeaturesPage = {
@@ -126,8 +127,14 @@ export type FeaturesPage = {
   intro?: string | null;
   repositoryCta?: ResolvedCta | null;
   currentTitle?: string | null;
+  currentSubtitle?: string | null;
   featureGroups?: { category?: string | null; features?: Feature[] | null }[] | null;
   roadmapTitle?: string | null;
+  roadmapSubtitle?: string | null;
+  contributeTitle?: string | null;
+  contributeDescription?: string | null;
+  suggestionTitle?: string | null;
+  suggestionDescription?: string | null;
   roadmapGroups?:
     | { priority?: string | null; blurb?: string | null; features?: Feature[] | null }[]
     | null;
@@ -144,6 +151,7 @@ export type LegalPage = {
   slug?: string | null;
   heading?: HeadingSegment[] | null;
   intro?: string | null;
+  notice?: string | null;
   showLastUpdated?: boolean | null;
   _updatedAt?: string | null;
   highlights?: { title?: string | null; description?: string | null }[] | null;

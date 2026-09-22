@@ -50,8 +50,15 @@ export const buildPageMetadata = ({
   const description =
     seo?.description || fallbackDescription || settings?.defaultSeoDescription || undefined;
 
-  // Per-field fallback: the page's own image, else the site default.
-  const ogImage = seo?.ogImage?.url ? seo.ogImage : settings?.defaultOgImage;
+  // Per-field fallback: the page's own image, else the site default from the
+  // CMS, else the image shipped in /public. The last step is not optional:
+  // this function always returns a full openGraph block, and a child's block
+  // replaces the parent's wholesale (AK-NXT-011) — so returning no image here
+  // would strip the root layout's image from every page that calls it.
+  const cmsImage = seo?.ogImage?.url ? seo.ogImage : settings?.defaultOgImage;
+  const ogImage = cmsImage?.url
+    ? cmsImage
+    : { url: "/OpenStream.png", width: 1200, height: 630, alt: siteName };
 
   const canonical = `${SITE_URL}${path}`;
 

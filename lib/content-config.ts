@@ -33,7 +33,7 @@ export const contentConfig = {
     techStack: {
       title: "Technology Stack",
       items: [
-        { name: "Next.js 15", description: "React framework with App Router" },
+        { name: "Next.js 16", description: "React framework with App Router" },
         { name: "LiveKit", description: "Real-time video streaming" },
         { name: "Clerk", description: "Authentication & user management" },
         { name: "Prisma", description: "Type-safe database ORM" },

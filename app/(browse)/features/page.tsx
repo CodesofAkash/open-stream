@@ -42,8 +42,16 @@ export default async function FeaturesPage() {
         ) : null}
       </header>
 
-      <CurrentFeatures title={page?.currentTitle} groups={page?.featureGroups} />
-      <FutureFeatures title={page?.roadmapTitle} groups={page?.roadmapGroups} />
+      <CurrentFeatures
+        title={page?.currentTitle}
+        subtitle={page?.currentSubtitle}
+        groups={page?.featureGroups}
+      />
+      <FutureFeatures
+        title={page?.roadmapTitle}
+        subtitle={page?.roadmapSubtitle}
+        groups={page?.roadmapGroups}
+      />
 
       {/* GitHub Contribution Section */}
       <section className="mb-20">
@@ -52,23 +60,27 @@ export default async function FeaturesPage() {
             <div className="inline-flex items-center justify-center size-16 rounded-full bg-primary/20 mx-auto mb-4">
               <Github className="size-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl">{features.github.title}</CardTitle>
+            <CardTitle className="text-2xl">{page?.contributeTitle ?? features.github.title}</CardTitle>
             <CardDescription className="text-base max-w-2xl mx-auto">
-              {features.github.description}
+              {page?.contributeDescription ?? features.github.description}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             <Button size="lg" asChild>
-              <a href={project.githubUrl} target="_blank" rel="noopener noreferrer">
+              <a
+                href={page?.repositoryCta?.href ?? project.githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <Github className="mr-2 size-5" />
-                {features.github.buttonText}
+                {page?.repositoryCta?.label ?? features.github.buttonText}
               </a>
             </Button>
           </CardContent>
         </Card>
       </section>
 
-      <SuggestionForm />
+      <SuggestionForm title={page?.suggestionTitle} description={page?.suggestionDescription} />
     </main>
   );
 }

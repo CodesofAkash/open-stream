@@ -46,10 +46,10 @@ export const linkFields = [
     name: "externalUrl",
     title: "External URL",
     type: "url",
-    description: "The full URL including https://.",
+    description: "The full URL including https://. mailto: and tel: links work too.",
     hidden: ({ parent }) => parent?.linkType !== "external",
     validation: (Rule) =>
-      Rule.custom((value, context) => {
+      Rule.uri({ scheme: ["http", "https", "mailto", "tel"] }).custom((value, context) => {
         const parent = context.parent as { linkType?: string } | undefined;
         if (parent?.linkType !== "external") return true;
         return value ? true : "An external link needs a URL.";
