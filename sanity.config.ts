@@ -2,7 +2,7 @@ import { defineConfig } from "sanity";
 import { structureTool } from "sanity/structure";
 import { visionTool } from "@sanity/vision";
 
-import { apiVersion, dataset, projectId, studioUrl } from "./sanity/env";
+import { apiVersion, dataset, isSanityConfigured, projectId, studioUrl } from "./sanity/env";
 import { SINGLETON_TYPES, schemaTypes } from "./sanity/schemas";
 import { structure } from "./sanity/structure";
 
@@ -17,7 +17,11 @@ export default defineConfig({
   name: "open-stream",
   title: "OpenStream",
   basePath: studioUrl,
-  projectId,
+  // Same reason as sanity/client.ts: defineConfig validates eagerly, so an
+  // empty projectId throws while rendering /studio rather than showing
+  // anything useful. The Studio route itself refuses to mount when
+  // unconfigured, so this value is never actually used to talk to Sanity.
+  projectId: isSanityConfigured ? projectId : "placeholder",
   dataset,
   plugins: [structureTool({ structure }), visionTool({ defaultApiVersion: apiVersion })],
   schema: {
