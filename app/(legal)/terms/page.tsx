@@ -3,14 +3,35 @@ import { Scale, FileText, AlertTriangle, UserCheck } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { contentConfig } from "@/lib/content-config";
+import { LegalPageView } from "@/components/sanity/legal-page-view";
+import { getLegalPage } from "@/sanity/pages";
+import { buildPageMetadata } from "@/sanity/seo";
+import { getSiteSettings } from "@/sanity/settings";
 
-export const metadata: Metadata = {
-  title: contentConfig.terms.title,
-  description: contentConfig.terms.description,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const [page, settings] = await Promise.all([
+    getLegalPage("terms"),
+    getSiteSettings(),
+  ]);
 
-export default function TermsPage() {
+  return buildPageMetadata({
+    seo: page?.seo,
+    settings,
+    fallbackTitle: contentConfig.terms.title,
+    fallbackDescription: contentConfig.terms.description,
+    path: "/terms",
+  });
+}
+
+export default async function TermsPage() {
   const { terms } = contentConfig;
+
+  // Once an editor publishes a "terms" legal page, it takes over entirely.
+  const cmsPage = await getLegalPage("terms");
+  if (cmsPage) {
+    return <LegalPageView page={cmsPage} icon={<Scale className="size-8 text-primary" />} />;
+  }
+
   return (
     <article className="space-y-8">
       {/* Hero */}

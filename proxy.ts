@@ -7,7 +7,10 @@ const isPublicRoute = createRouteMatcher([
   '/api/webhooks(.*)',
   '/api/uploadthing',
   '/:username',
-  '/search'
+  '/search',
+  // The Studio has its own Sanity login. Putting it behind Clerk as well would
+  // lock out any editor who is not also an app user.
+  '/studio(.*)',
 ])
 
 export default clerkMiddleware(async (auth, req) => {

@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChatInfo } from "./chat-info";
+import { capture } from "@/lib/analytics/client";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
 
 interface ChatFormProps {
   onSubmit: () => void;
@@ -37,6 +39,9 @@ export const ChatForm = ({
     e.stopPropagation();
 
     if (!value || isDisabled) return;
+
+    // Engagement depth while watching — chat is the reason people stay.
+    capture(ANALYTICS_EVENTS.CHAT_MESSAGE_SENT);
 
     if (isDelayed && !isDelayBlocked) {
       setIsDelayBlocked(true);

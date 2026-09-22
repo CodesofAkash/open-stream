@@ -3,14 +3,36 @@ import { Shield, Lock, Eye, FileText, Mail } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { contentConfig } from "@/lib/content-config";
+import { LegalPageView } from "@/components/sanity/legal-page-view";
+import { getLegalPage } from "@/sanity/pages";
+import { buildPageMetadata } from "@/sanity/seo";
+import { getSiteSettings } from "@/sanity/settings";
 
-export const metadata: Metadata = {
-  title: contentConfig.privacy.title,
-  description: contentConfig.privacy.description,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const [page, settings] = await Promise.all([
+    getLegalPage("privacy"),
+    getSiteSettings(),
+  ]);
 
-export default function PrivacyPage() {
+  return buildPageMetadata({
+    seo: page?.seo,
+    settings,
+    fallbackTitle: contentConfig.privacy.title,
+    fallbackDescription: contentConfig.privacy.description,
+    path: "/privacy",
+  });
+}
+
+export default async function PrivacyPage() {
   const { privacy, project } = contentConfig;
+
+  // Once an editor publishes a "privacy" legal page, it takes over entirely.
+  // Until then the shipped copy renders exactly as before.
+  const cmsPage = await getLegalPage("privacy");
+  if (cmsPage) {
+    return <LegalPageView page={cmsPage} icon={<Shield className="size-8 text-primary" />} />;
+  }
+
   return (
     <article className="space-y-8">
       {/* Hero Section */}
