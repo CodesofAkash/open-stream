@@ -6,15 +6,17 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 
 type Props = {
   title?: string | null;
+  subtitle?: string | null;
   groups?: FeaturesPage["featureGroups"];
 };
 
-export const CurrentFeatures = ({ title, groups }: Props) => {
+export const CurrentFeatures = ({ title, subtitle, groups }: Props) => {
   const { features } = contentConfig;
 
   // CMS content wins whole, rather than field by field, so a published page
   // never renders half from Sanity and half from the shipped constants.
   const heading = title ?? features.currentFeatures.title;
+  const intro = subtitle ?? features.currentFeatures.subtitle;
   const categories = groups?.length ? groups : currentFeatures;
 
   return (
@@ -22,7 +24,7 @@ export const CurrentFeatures = ({ title, groups }: Props) => {
       <div className="text-center mb-12">
         <h2 className="text-3xl font-bold mb-3">{heading}</h2>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          {features.currentFeatures.subtitle}
+          {intro}
         </p>
       </div>
       

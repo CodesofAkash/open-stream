@@ -52,6 +52,14 @@ export const legalPage = defineType({
       description: "The line under the heading. Leave empty and nothing renders there.",
     }),
     defineField({
+      name: "notice",
+      title: "Notice",
+      type: "text",
+      rows: 2,
+      group: "content",
+      description: "An optional highlighted box under the intro — for the one thing every reader must see. Leave empty and nothing renders.",
+    }),
+    defineField({
       name: "showLastUpdated",
       title: "Show the last-updated date",
       type: "boolean",

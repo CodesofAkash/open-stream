@@ -35,13 +35,15 @@ const statusConfig = {
 
 type Props = {
   title?: string | null;
+  subtitle?: string | null;
   groups?: FeaturesPage["roadmapGroups"];
 };
 
-export const FutureFeatures = ({ title, groups }: Props) => {
+export const FutureFeatures = ({ title, subtitle, groups }: Props) => {
   const { features } = contentConfig;
 
   const heading = title ?? features.futureFeatures.title;
+  const intro = subtitle ?? features.futureFeatures.subtitle;
   const bands = groups?.length ? groups : futureFeatures;
 
   return (
@@ -49,7 +51,7 @@ export const FutureFeatures = ({ title, groups }: Props) => {
       <div className="text-center mb-12">
         <h2 className="text-3xl font-bold mb-3">{heading}</h2>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          {features.futureFeatures.subtitle}
+          {intro}
         </p>
       </div>
       

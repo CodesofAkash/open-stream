@@ -44,16 +44,22 @@ export const FEATURES_PAGE_QUERY = groq`
     intro,
     repositoryCta{ ${CTA_FRAGMENT} },
     currentTitle,
+    currentSubtitle,
     featureGroups[]{
       category,
       features[]{ name, description, tech }
     },
     roadmapTitle,
+    roadmapSubtitle,
     roadmapGroups[]{
       priority,
       blurb,
-      features[]{ name, description }
+      features[]{ name, description, status }
     },
+    contributeTitle,
+    contributeDescription,
+    suggestionTitle,
+    suggestionDescription,
     seo{ ${SEO_FRAGMENT} }
   }
 `;
@@ -63,6 +69,7 @@ export const LEGAL_PAGE_QUERY = groq`
     "slug": slug.current,
     heading[]{ ${HEADING_FRAGMENT} },
     intro,
+    notice,
     showLastUpdated,
     _updatedAt,
     highlights[]{ title, description },

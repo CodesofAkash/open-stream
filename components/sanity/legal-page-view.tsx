@@ -1,5 +1,6 @@
 import type { PortableTextBlock } from "@portabletext/types";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { LegalPage } from "@/sanity/types";
 
@@ -44,6 +45,12 @@ export const LegalPageView = ({ page, icon }: Props) => (
         </p>
       ) : null}
     </header>
+
+    {page.notice ? (
+      <Alert>
+        <AlertDescription>{page.notice}</AlertDescription>
+      </Alert>
+    ) : null}
 
     {page.highlights && page.highlights.length > 0 ? (
       <div className="grid md:grid-cols-3 gap-4">
