@@ -30,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider appearance={{ baseTheme: dark }}>
+    <ClerkProvider appearance={{ theme: dark }}>
       <html lang="en" className="dark" style={{ colorScheme: "dark" }}>
         <body
           className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
@@ -55,6 +55,7 @@ export default function RootLayout({
 
 
 export const metadata: Metadata = {
+  metadataBase: new URL(contentConfig.project.baseUrl),
   title: {
     default: "OpenStream - Live Streaming Platform",
     template: "%s | OpenStream",

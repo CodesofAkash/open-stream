@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -28,7 +27,9 @@ interface SimpleCategory {
 interface CategorySelectorProps {
   categories: SimpleCategory[];
   value?: string;
-  onChange: (categoryId: string) => void; // Simplified - just pass ID
+  // The display name travels with the id so callers can show it without a
+  // second lookup. Callers relied on this already; it was never passed.
+  onChange: (categoryId: string, categoryName: string) => void;
 }
 
 export const CategorySelector = ({
@@ -47,7 +48,8 @@ export const CategorySelector = ({
   );
 
   const handleSelect = (categoryId: string) => {
-    onChange(categoryId);
+    const category = categories?.find((cat) => cat.id === categoryId);
+    onChange(categoryId, category?.name ?? categoryId);
     setOpen(false);
   };
 
@@ -55,7 +57,8 @@ export const CategorySelector = ({
     if (search.trim()) {
       // Pass the name as ID for custom categories
       // The backend will create it if it doesn't exist
-      onChange(search.trim());
+      // A custom category is identified by its own name.
+      onChange(search.trim(), search.trim());
       setOpen(false);
       // Keep search to show what was selected until component re-renders
       setTimeout(() => setSearch(""), 100);

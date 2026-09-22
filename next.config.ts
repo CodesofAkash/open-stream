@@ -29,24 +29,10 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
 
-  webpack: (config, { isServer }) => {
-    config.externals.push({
-      "utf-8-validate": "commonjs utf-8-validate",
-      bufferutil: "commonjs bufferutil",
-    });
-
-    // Optimize bundle size
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-      };
-    }
-
-    return config;
-  },
+  // Next 16 builds with Turbopack. The old webpack block (ws optional native
+  // deps as externals, fs/net/tls fallbacks) is handled by Turbopack directly,
+  // and a webpack config it never reads is worse than none.
+  turbopack: {},
 
   async headers() {
     return [
@@ -69,15 +55,6 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-
-  output: "standalone", // THIS IS THE KEY LINE
 };
 
 export default nextConfig;
