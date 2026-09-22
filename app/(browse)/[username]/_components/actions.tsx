@@ -8,6 +8,8 @@ import { onBlock, onUnblock } from "@/actions/block";
 import { onFollow, onUnfollow } from "@/actions/follow";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/error-utils";
+import { capture } from "@/lib/analytics/client";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
 
 interface ActionsProps {
   isFollowing: boolean;
@@ -31,9 +33,12 @@ export const Actions = ({
 
     startTransition(() => {
       onFollow(userId)
-        .then((data) =>
-          toast.success(`You are now following ${data.following.username}`)
-        )
+        .then((data) => {
+          // The strongest retention signal on a streaming platform, and one a
+          // page view cannot answer (AK-ANL-006).
+          capture(ANALYTICS_EVENTS.CHANNEL_FOLLOWED, { channel: data.following.username });
+          toast.success(`You are now following ${data.following.username}`);
+        })
         .catch((error) => toast.error(getErrorMessage(error)));
     });
   };

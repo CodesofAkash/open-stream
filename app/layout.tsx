@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
 
@@ -12,17 +11,9 @@ import { contentConfig } from "@/lib/content-config";
 import { Toaster } from 'sonner'
 import { OfflineIndicator } from "@/components/offline-indicator";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-  display: "swap", // Improve perceived load time
-});
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  display: "swap", // Improve perceived load time
-});
+import { SanityLive } from "@/sanity/live";
 
 export default function RootLayout({
   children,
@@ -30,11 +21,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider appearance={{ baseTheme: dark }}>
+    <ClerkProvider appearance={{ theme: dark }}>
       <html lang="en" className="dark" style={{ colorScheme: "dark" }}>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
-        >
+        {/*
+          Geist and Geist_Mono used to be loaded here. Nothing referenced them:
+          globals.css defines no --font-sans or --font-mono in @theme, so
+          Tailwind's font-sans resolved to its default system stack and the
+          --font-geist-* variables were dead. Two families, nine preloaded
+          woff2 files, downloaded on every page and applied to nothing.
+
+          Removing them changes no pixel — the site already rendered in the
+          system stack. To actually adopt Geist, add
+          `--font-sans: var(--font-geist-sans)` to @theme first; that is a
+          design change, not a performance one.
+        */}
+        <body className="font-sans antialiased">
           <ThemeProvider
             attribute="class"
             forcedTheme="dark"
@@ -45,6 +46,26 @@ export default function RootLayout({
             <OfflineIndicator />
             {children}
           </ThemeProvider>
+          {/*
+            Mounted unconditionally. Gating <SanityLive /> on draft mode freezes
+            production at build time while dev looks perfect (AK-SAN-008), and
+            gating it on maintenance mode would stop the publish that turns
+            maintenance back off from ever arriving.
+
+            The maintenance gate, consent banner and injected scripts live in
+            <PublicChrome>, used by the public route groups. Keeping them out of
+            the root layout keeps the Studio clear of all of it
+            (AK-CMS-031, AK-ARCH-006) without reading headers() here — which
+            would opt every route in the app out of static rendering.
+          */}
+          <SanityLive />
+          {/*
+            Cookieless, so it sits OUTSIDE the consent gate and measures every
+            visitor rather than only those who accept. Field data and lab scores
+            answer different questions — when they disagree neither is wrong
+            (AK-ANL-008).
+          */}
+          <SpeedInsights />
         </body>
       </html>
     </ClerkProvider>
@@ -55,6 +76,7 @@ export default function RootLayout({
 
 
 export const metadata: Metadata = {
+  metadataBase: new URL(contentConfig.project.baseUrl),
   title: {
     default: "OpenStream - Live Streaming Platform",
     template: "%s | OpenStream",
@@ -70,12 +92,23 @@ export const metadata: Metadata = {
     siteName: "OpenStream",
     title: "OpenStream - Live Streaming Platform",
     description: "Watch live streams and interact with creators",
+    // Inherited wholesale by every page that does not set its own openGraph
+    // block, so the image belongs here rather than only on the home page.
+    images: [
+      {
+        url: "/OpenStream.png",
+        width: 1200,
+        height: 630,
+        alt: "OpenStream - Live Streaming Platform",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "OpenStream",
     description: "Live streaming platform",
     creator: "@CodesOfAkash",
+    images: ["/OpenStream.png"],
   },
   robots: {
     index: true,

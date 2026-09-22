@@ -1,13 +1,16 @@
 "use client";
 
 import { useSidebar } from "@/store/use-sidebar";
-import { User } from "@prisma/client";
+import type { getRecommended } from "@/lib/recommended-service";
 import { UserItem, UserItemSkeleton } from "./user-item";
 
+// Derived from the query rather than declared as a full User: getRecommended
+// selects four fields, so claiming the whole model here was a lie the build
+// could not catch while typescript.ignoreBuildErrors was on.
+type RecommendedUser = Awaited<ReturnType<typeof getRecommended>>[number];
+
 interface RecommendedProps {
-    data: (User & {
-        stream: { isLive: boolean} | null;
-    })[];
+    data: RecommendedUser[];
 }
 
 export const Recommended = ({data}: RecommendedProps) => {

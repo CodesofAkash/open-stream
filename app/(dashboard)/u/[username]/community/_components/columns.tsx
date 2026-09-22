@@ -2,7 +2,8 @@
 
 import { Button } from "@/components/ui/button"
 import { UserAvatar } from "@/components/user-avatar"
-import { ColumnDef } from "@tanstack/react-table"
+import type { ColumnDef } from "@tanstack/react-table"
+import type { CommunityTableFeatures } from "./table-features"
 import { ArrowUpDown } from "lucide-react"
 import UnblockButton from "./unblock-button"
 
@@ -14,7 +15,9 @@ export type BlockedUser = {
   createdAt: string
 }
 
-export const columns: ColumnDef<BlockedUser>[] = [
+// v9 parameterises ColumnDef by the feature set, so the columns know which
+// behaviour (sorting, filtering) is actually available to them.
+export const columns: ColumnDef<CommunityTableFeatures, BlockedUser, unknown>[] = [
   {
     accessorKey: "username",
     header: ({ column }) => (
@@ -23,7 +26,7 @@ export const columns: ColumnDef<BlockedUser>[] = [
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Username
-        <ArrowUpDown className="ml-2 h-4 w-4" />
+        <ArrowUpDown className="ml-2 size-4" />
       </Button>
     ),
     cell: ({row}) => (
@@ -44,7 +47,7 @@ export const columns: ColumnDef<BlockedUser>[] = [
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Date Blocked
-        <ArrowUpDown className="ml-2 h-4 w-4" />
+        <ArrowUpDown className="ml-2 size-4" />
       </Button>
     ),
   },

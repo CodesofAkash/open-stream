@@ -109,10 +109,14 @@ export async function generateMetadata({
   const { username } = await params;
   const user = await getUserByUsername(username);
 
-  if (!user) {
-    return {
-      title: "User Not Found",
-    };
+  // notFound() here, not a "User Not Found" title. generateMetadata runs
+  // BEFORE the streaming shell is flushed; the (browse) layout wraps its
+  // sidebar in <Suspense>, so once the shell goes out the status is already
+  // 200 and the page body's own notFound() can no longer change it. The
+  // visitor saw 404 copy while crawlers were told the page exists, and soft
+  // 404s get indexed.
+  if (!user || !user.stream) {
+    notFound();
   }
 
   return {

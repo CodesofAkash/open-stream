@@ -12,7 +12,7 @@ export const Logo = () => {
     return (
         <div className="flex flex-col items-center gap-y-4">
             <div className="bg-[#ffffff] rounded-full p-1">
-                <Image src={"/OpenStream.png"} alt="threads-clone" height={80} width={80} />
+                <Image src={"/OpenStream.png"} alt="OpenStream" height={80} width={80} />
             </div>
             <div className={cn("flex flex-col items-center", font.className)}>
                 <p className="text-xl font-semibold">OpenStream</p>

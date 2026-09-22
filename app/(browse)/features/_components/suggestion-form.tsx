@@ -18,7 +18,14 @@ import {
 } from "@/components/ui/select";
 import { Send } from "lucide-react";
 
-export const SuggestionForm = () => {
+type SuggestionFormProps = {
+  title?: string | null;
+  description?: string | null;
+};
+
+// The heading and intro are editorial; the field labels stay constants because
+// they are wired to the form's validation (AK-CMS-011).
+export const SuggestionForm = ({ title, description }: SuggestionFormProps) => {
   const { features } = contentConfig;
   const [isPending, startTransition] = useTransition();
   const [formData, setFormData] = useState({
@@ -61,10 +68,10 @@ export const SuggestionForm = () => {
         <CardHeader className="space-y-3 pb-6">
           <div className="flex items-center gap-2">
             <Send className="w-6 h-6 text-primary" />
-            <CardTitle className="text-2xl">{features.suggestionForm.title}</CardTitle>
+            <CardTitle className="text-2xl">{title ?? features.suggestionForm.title}</CardTitle>
           </div>
           <CardDescription className="text-base">
-            {features.suggestionForm.description}
+            {description ?? features.suggestionForm.description}
           </CardDescription>
         </CardHeader>
 
