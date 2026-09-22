@@ -25,17 +25,20 @@ export async function POST(req: Request) {
 
   const wh = new Webhook(WEBHOOK_SECRET);
 
-  let evt: WebhookEvent;
-
+  // svix 2 changed verify() to return undefined — it validates the signature
+  // and throws, rather than handing back the parsed payload. The body we
+  // already parsed above is the event.
   try {
-    evt = wh.verify(body, {
+    wh.verify(body, {
       "svix-id": svix_id,
       "svix-timestamp": svix_timestamp,
       "svix-signature": svix_signature,
-    }) as WebhookEvent;
+    });
   } catch {
     return new Response("Invalid signature", { status: 400 });
   }
+
+  const evt = payload as WebhookEvent;
 
   if (evt.type === "user.created") {
     await db.user.create({

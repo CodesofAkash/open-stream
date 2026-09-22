@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import { Mail, MessageSquare, Github, Send, Loader2 } from "lucide-react";
+import { Mail, MessageSquare, Send, Loader2 } from "lucide-react";
+import { Github } from "@/components/icons/github";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +13,7 @@ import emailjs from "@emailjs/browser";
 import { toast } from "sonner";
 
 export default function ContactPage() {
-  const { contact, project } = contentConfig;
+  const { contact } = contentConfig;
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",

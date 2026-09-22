@@ -5,7 +5,7 @@ import { SuggestionForm } from "./_components/suggestion-form";
 import { contentConfig } from "@/lib/content-config";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Github } from "lucide-react";
+import { Github } from "@/components/icons/github";
 
 export const metadata: Metadata = {
   title: contentConfig.features.title,
