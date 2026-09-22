@@ -71,12 +71,23 @@ export const metadata: Metadata = {
     siteName: "OpenStream",
     title: "OpenStream - Live Streaming Platform",
     description: "Watch live streams and interact with creators",
+    // Inherited wholesale by every page that does not set its own openGraph
+    // block, so the image belongs here rather than only on the home page.
+    images: [
+      {
+        url: "/OpenStream.png",
+        width: 1200,
+        height: 630,
+        alt: "OpenStream - Live Streaming Platform",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "OpenStream",
     description: "Live streaming platform",
     creator: "@CodesOfAkash",
+    images: ["/OpenStream.png"],
   },
   robots: {
     index: true,
