@@ -79,7 +79,7 @@ export default async function PrivacyPage() {
           <CardContent className="space-y-4">
             {privacy.sections[0].subsections?.map((subsection) => (
               <div key={subsection.title}>
-                <h4 className="font-semibold mb-2">{subsection.title}</h4>
+                <h2 className="font-semibold mb-2">{subsection.title}</h2>
                 <ul className="list-disc pl-6 text-sm text-muted-foreground space-y-1">
                   {subsection.items.map((item) => (
                     <li key={item}>{item}</li>
@@ -133,7 +133,7 @@ export default async function PrivacyPage() {
             <div className="grid md:grid-cols-2 gap-4 text-sm">
               {privacy.sections[3].rights?.map((right) => (
                 <div key={right.title}>
-                  <h4 className="font-semibold mb-2">{right.title}</h4>
+                  <h2 className="font-semibold mb-2">{right.title}</h2>
                   <p className="text-muted-foreground">{right.description}</p>
                 </div>
               ))}

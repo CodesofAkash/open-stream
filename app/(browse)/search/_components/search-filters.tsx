@@ -86,7 +86,7 @@ export const SearchFilters = ({
             placeholder="Search by tag..."
             disabled={isPending}
           />
-          <Button type="submit" size="icon" disabled={isPending || !tagInput.trim()}>
+          <Button type="submit" size="icon" aria-label="Search by tag" disabled={isPending || !tagInput.trim()}>
             <Search className="h-4 w-4" />
           </Button>
         </form>

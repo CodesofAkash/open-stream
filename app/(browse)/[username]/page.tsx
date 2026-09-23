@@ -70,11 +70,13 @@ const UserPage = async ({ params }: UserPageProps) => {
   };
 
   return (
+    // <main> so the channel page has a landmark like every other page.
+    <main className="h-full">
     <StreamPlayerErrorBoundary>
       <Suspense fallback={<StreamPlayerSkeleton />}>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
         />
         <LazyStreamPlayer
           user={{
@@ -93,7 +95,7 @@ const UserPage = async ({ params }: UserPageProps) => {
         />
       </Suspense>
     </StreamPlayerErrorBoundary>
-    
+    </main>
   );
 };
 

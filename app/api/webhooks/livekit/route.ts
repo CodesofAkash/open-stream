@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { WebhookReceiver } from "livekit-server-sdk";
+import { revalidateTag } from "next/cache";
 import { db } from "@/lib/db";
 
 const receiver = new WebhookReceiver(
@@ -37,6 +38,12 @@ export async function POST(req: Request) {
   if (event.event === "ingress_ended") {
     await db.stream.updateMany({ where: { ingressId }, data: { isLive: false } });
   }
+
+  // The anonymous stream list is cached for 30s. Going live or ending a stream
+  // is exactly when that list is wrong, so drop it now rather than letting a
+  // viewer wait out the window.
+  // Next 16 requires a cacheLife profile as the second argument.
+  revalidateTag("streams", { expire: 0 });
 
   return new Response("", { status: 200 });
 }
