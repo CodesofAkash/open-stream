@@ -12,7 +12,7 @@ export const Navigation = () => {
 
     const routes = [
         {
-            label: "Stream",
+            label: "Channel",
             href: `/u/${user?.username}`,
             icon: Fullscreen,
         },
