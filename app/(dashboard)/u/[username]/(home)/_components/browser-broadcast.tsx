@@ -8,11 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useBroadcast } from "@/components/broadcast/broadcast-provider";
 import { BroadcastStudio } from "@/components/broadcast/broadcast-studio";
 
-/**
- * The card on the Keys page. The broadcast itself lives in the root-level
- * provider, so this is only the control surface: leaving this page no longer
- * ends the stream.
- */
+// Only the control surface — the broadcast itself lives in the root-level
+// provider, so moving around the dashboard does not end the stream.
 export const BrowserBroadcast = ({ username }: { username: string }) => {
   const { isBroadcasting, isStarting, start } = useBroadcast();
 
@@ -20,13 +17,20 @@ export const BrowserBroadcast = ({ username }: { username: string }) => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-xl">
-          <VideoIcon className="size-5" />
+          <VideoIcon className="size-5" aria-hidden="true" />
           Go live from your browser
         </CardTitle>
         <CardDescription>
           Stream straight from your camera — no OBS, no stream key. Share your screen,
-          switch devices, and keep browsing the site while you are live. Use the RTMP or
-          WHIP keys below instead if you prefer OBS.
+          switch devices, and keep browsing the site while you are live. Prefer OBS?
+          The RTMP and WHIP details are under{" "}
+          <Link
+            href={`/u/${username}/keys`}
+            className="text-primary underline underline-offset-4"
+          >
+            Keys
+          </Link>
+          .
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -34,9 +38,17 @@ export const BrowserBroadcast = ({ username }: { username: string }) => {
           <>
             <BroadcastStudio />
             <p className="text-sm text-muted-foreground">
-              You stay live while you move around the site.{" "}
+              You stay live while you move around the site. For a composed screen-and-camera
+              layout, open{" "}
+              <Link
+                href={`/u/${username}/studio`}
+                className="text-primary underline underline-offset-4"
+              >
+                Studio
+              </Link>
+              , or{" "}
               <Link href={`/${username}`} className="text-primary underline underline-offset-4">
-                Open your channel
+                your channel
               </Link>{" "}
               to watch the stream and read chat.
             </p>

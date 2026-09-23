@@ -13,6 +13,7 @@ import { LiveKitRoom } from "@livekit/components-react";
 import { toast } from "sonner";
 
 import { createBroadcastToken, setBroadcastLive } from "@/actions/broadcast";
+import CompositorProvider from "@/components/broadcast/compositor-provider";
 
 /**
  * Keeps a broadcast alive across navigation.
@@ -99,7 +100,12 @@ export const BroadcastProvider = ({ children }: { children: ReactNode }) => {
           onDisconnected={() => setToken(null)}
           onError={() => toast.error("Lost connection to the stream")}
         >
-          {children}
+          {/*
+            Studio mode needs the room's local participant, so it is nested
+            here rather than beside this provider — and like the broadcast, it
+            has to outlive navigation between dashboard tabs.
+          */}
+          <CompositorProvider>{children}</CompositorProvider>
         </LiveKitRoom>
       ) : (
         children
