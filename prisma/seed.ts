@@ -17,6 +17,10 @@ const prisma = new PrismaClient({
 
 async function main() {
   console.log("🌱 Starting comprehensive seed...");
+  // Demo channels are seeded OFFLINE on purpose. isLive only means "LiveKit has
+  // a publisher in this room" — setting it without an ingress made every demo
+  // channel advertise itself as live and then hang on connect when clicked.
+  // The flag is owned by the LiveKit webhook, not by fixtures.
 
   // Clear existing data
   console.log("🗑️  Clearing existing data...");
@@ -203,7 +207,7 @@ async function main() {
       stream: {
         name: "RANKED GRIND - Road to Immortal 🔥",
         thumbnailUrl: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&h=450&fit=crop",
-        isLive: true,
+        isLive: false,
         viewerCount: 1247,
         peakViewerCount: 1589,
         categorySlug: "valorant",
@@ -218,7 +222,7 @@ async function main() {
       stream: {
         name: "Building a Real-Time Chat App with Next.js",
         thumbnailUrl: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&h=450&fit=crop",
-        isLive: true,
+        isLive: false,
         viewerCount: 892,
         peakViewerCount: 1124,
         categorySlug: "programming",
@@ -233,7 +237,7 @@ async function main() {
       stream: {
         name: "Mega City Build Day 47 - Building the Stadium",
         thumbnailUrl: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&h=450&fit=crop",
-        isLive: true,
+        isLive: false,
         viewerCount: 2341,
         peakViewerCount: 2876,
         categorySlug: "minecraft",
@@ -248,7 +252,7 @@ async function main() {
       stream: {
         name: "Making Authentic Italian Pasta from Scratch",
         thumbnailUrl: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&h=450&fit=crop",
-        isLive: true,
+        isLive: false,
         viewerCount: 567,
         peakViewerCount: 734,
         categorySlug: "cooking",
@@ -263,7 +267,7 @@ async function main() {
       stream: {
         name: "First Time Playing Resident Evil 4 Remake",
         thumbnailUrl: "https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=800&h=450&fit=crop",
-        isLive: true,
+        isLive: false,
         viewerCount: 1834,
         peakViewerCount: 2103,
         categorySlug: "horror",

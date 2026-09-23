@@ -58,20 +58,31 @@ export const createIngress = async (ingressType: IngressInput) => {
   };
 
   if (ingressType === IngressInput.WHIP_INPUT) {
+    // WHIP publishes straight from the browser, so the stream is forwarded
+    // as-is with no server-side transcoding. Cheapest path by far.
     options.bypassTranscoding = true;
   } else {
+    // RTMP (OBS) has to be transcoded by LiveKit. This was set to
+    // H264_1080P_30FPS_3_LAYERS — the heaviest preset available: 1080p30
+    // re-encoded into three simulcast layers. That is where free-tier
+    // bandwidth goes, it loads the ingest pipeline hardest, and transcoding
+    // under load is a classic cause of audio drifting out of sync with video.
+    //
+    // 720p30 with two layers looks the same in a 16:9 player at this size and
+    // costs a fraction. Raise it again only if there is a reason to.
     options.video = new IngressVideoOptions({
       source: TrackSource.CAMERA,
       encodingOptions: {
         case: "preset",
-        value: IngressVideoEncodingPreset.H264_1080P_30FPS_3_LAYERS,
+        value: IngressVideoEncodingPreset.H264_720P_30FPS_3_LAYERS,
       },
     });
     options.audio = new IngressAudioOptions({
       source: TrackSource.MICROPHONE,
       encodingOptions: {
         case: "preset",
-        value: IngressAudioEncodingPreset.OPUS_STEREO_96KBPS,
+        // Speech and game audio do not need 96kbps stereo.
+        value: IngressAudioEncodingPreset.OPUS_MONO_64KBS,
       },
     });
   }
