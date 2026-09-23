@@ -56,7 +56,9 @@ type CaptureKind = "camera" | "screen" | "microphone";
 interface StudioContextValue {
   scenes: Scene[];
   isLoadingScenes: boolean;
+  scenesError: string | null;
   ensureScenes: () => Promise<void>;
+  retryScenes: () => Promise<void>;
   activeScene: Scene | null;
   activeSceneId: string | null;
   selectedSourceId: string | null;
@@ -103,19 +105,31 @@ function useStudio() {
   return context;
 }
 
-/** Play a capture through a detached element the canvas can draw from. */
-async function createSourceVideo(stream: MediaStream) {
+/**
+ * Play a capture through an off-screen element the canvas can draw from.
+ *
+ * It is kept in the document rather than detached: a browser may stop decoding
+ * frames for an element in no document, and `display: none` has the same
+ * effect — so it is parked out of view instead, where decoding continues.
+ */
+async function createSourceVideo(stream: MediaStream, host: HTMLElement | null) {
   const video = document.createElement("video");
   video.srcObject = stream;
   video.muted = true;
   video.playsInline = true;
+  video.width = 16;
+  video.height = 9;
+
+  host?.appendChild(video);
   await video.play();
+
   return video;
 }
 
 function StudioProvider({ children }: { children: ReactNode }) {
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [isLoadingScenes, setIsLoadingScenes] = useState(false);
+  const [scenesError, setScenesError] = useState<string | null>(null);
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -142,6 +156,7 @@ function StudioProvider({ children }: { children: ReactNode }) {
   const mixerRef = useRef<AudioMixer | null>(null);
   const outputCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageHostRef = useRef<HTMLDivElement | null>(null);
+  const sourcesHostRef = useRef<HTMLDivElement | null>(null);
   const stageParkRef = useRef<HTMLDivElement | null>(null);
 
   const activeScene = useMemo(
@@ -172,6 +187,11 @@ function StudioProvider({ children }: { children: ReactNode }) {
 
   const addSource = useCallback(
     (kind: SourceKind) => {
+      if (!activeScene) {
+        toast.error("Create a scene first");
+        return;
+      }
+
       // Built outside the updater: React may run an updater twice, and this one
       // would mint a different id each time.
       const source = createSource(kind, activeScene?.sources.length ?? 0);
@@ -286,11 +306,9 @@ function StudioProvider({ children }: { children: ReactNode }) {
     setSelectedSourceId(null);
   }, []);
 
-  /** Loaded the first time a streamer opens the studio, and only then. */
-  const ensureScenes = useCallback(async () => {
-    if (scenesRequestedRef.current) return;
-    scenesRequestedRef.current = true;
+  const loadScenes = useCallback(async () => {
     setIsLoadingScenes(true);
+    setScenesError(null);
 
     try {
       const loaded = await listScenes();
@@ -298,12 +316,21 @@ function StudioProvider({ children }: { children: ReactNode }) {
       setActiveSceneId((current) => current ?? loaded[0]?.id ?? null);
     } catch (error) {
       console.error("Could not load your scenes", error);
-      toast.error("Could not load your scenes");
-      scenesRequestedRef.current = false;
+      // Held in state rather than a toast that disappears: with no scene there
+      // is no canvas, so every control below goes quiet and the reason has to
+      // stay on screen.
+      setScenesError("Your scenes could not be loaded, so the studio is empty.");
     } finally {
       setIsLoadingScenes(false);
     }
   }, []);
+
+  /** Loaded the first time a streamer opens the studio, and only then. */
+  const ensureScenes = useCallback(async () => {
+    if (scenesRequestedRef.current) return;
+    scenesRequestedRef.current = true;
+    await loadScenes();
+  }, [loadScenes]);
 
   // ── capture ───────────────────────────────────────────────────────────────
 
@@ -316,6 +343,7 @@ function StudioProvider({ children }: { children: ReactNode }) {
       if (element) {
         element.pause();
         element.srcObject = null;
+        element.remove();
         delete elementsRef.current[kind];
       }
 
@@ -359,7 +387,7 @@ function StudioProvider({ children }: { children: ReactNode }) {
       streamsRef.current[kind] = stream;
 
       if (kind === "camera" || kind === "screen") {
-        const element = await createSourceVideo(stream);
+        const element = await createSourceVideo(stream, sourcesHostRef.current);
         elementsRef.current[kind] = element;
         (kind === "camera" ? setCameraElement : setScreenElement)(element);
       }
@@ -425,8 +453,13 @@ function StudioProvider({ children }: { children: ReactNode }) {
   // ── going live ────────────────────────────────────────────────────────────
 
   const goLive = useCallback(async () => {
+    if (!activeScene) {
+      toast.error("Add a scene before going live");
+      return;
+    }
+
     if (!outputCanvasRef.current) {
-      toast.error("Open the Studio tab once before going live");
+      toast.error("The studio canvas is still starting up");
       return;
     }
 
@@ -444,7 +477,7 @@ function StudioProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsStarting(false);
     }
-  }, [mixer]);
+  }, [mixer, activeScene]);
 
   const stopLive = useCallback(async () => {
     setToken(null);
@@ -512,7 +545,9 @@ function StudioProvider({ children }: { children: ReactNode }) {
     () => ({
       scenes,
       isLoadingScenes,
+      scenesError,
       ensureScenes,
+      retryScenes: loadScenes,
       activeScene,
       activeSceneId,
       selectedSourceId,
@@ -547,7 +582,9 @@ function StudioProvider({ children }: { children: ReactNode }) {
     [
       scenes,
       isLoadingScenes,
+      scenesError,
       ensureScenes,
+      loadScenes,
       activeScene,
       activeSceneId,
       selectedSourceId,
@@ -586,6 +623,13 @@ function StudioProvider({ children }: { children: ReactNode }) {
         back here when that page unmounts. Loading it costs a visitor nothing:
         it only renders once there is a scene to draw.
       */}
+      {/* Captures are parked here, on screen but out of sight, so the browser
+          keeps decoding their frames for the canvas to draw. */}
+      <div
+        ref={sourcesHostRef}
+        aria-hidden="true"
+        style={{ position: "fixed", left: "-10000px", top: 0, width: 16, height: 9, overflow: "hidden" }}
+      />
       <div ref={stageParkRef}>
         {activeScene ? (
           <div

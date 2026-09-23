@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { EyeOff, Radio } from "lucide-react";
+import { AlertTriangle, EyeOff, Radio } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { useStudio } from "@/components/studio/studio-provider";
 import AudioPanel from "@/components/studio/panels/audio-panel";
 import ControlsPanel from "@/components/studio/panels/controls-panel";
@@ -13,7 +14,8 @@ import SourcesPanel from "@/components/studio/panels/sources-panel";
 // Owns no state: the canvas and every capture live above this page, so leaving
 // it interrupts nothing.
 function StudioWorkspace({ username }: { username: string }) {
-  const { ensureScenes, isLoadingScenes, activeScene, hostStage, isLive } = useStudio();
+  const { ensureScenes, retryScenes, isLoadingScenes, scenesError, activeScene, hostStage, isLive } =
+    useStudio();
   // Only whether a stage exists matters here; re-running on every edit would
   // move the canvas in the DOM each time a source was dragged.
   const hasStage = Boolean(activeScene);
@@ -36,10 +38,20 @@ function StudioWorkspace({ username }: { username: string }) {
       <div className="overflow-hidden rounded-lg border border-border bg-black">
         <div ref={stageSlotRef} className="w-full" />
 
-        {!activeScene && (
+        {!activeScene && !scenesError && (
           <p className="p-10 text-center text-sm text-muted-foreground">
             {isLoadingScenes ? "Loading your scenes…" : "No scene yet."}
           </p>
+        )}
+
+        {!activeScene && scenesError && (
+          <div className="flex flex-col items-center gap-3 p-10 text-center">
+            <AlertTriangle className="size-6 text-amber-500" aria-hidden="true" />
+            <p className="text-sm text-muted-foreground">{scenesError}</p>
+            <Button variant="outline" size="sm" disabled={isLoadingScenes} onClick={() => void retryScenes()}>
+              {isLoadingScenes ? "Retrying…" : "Try again"}
+            </Button>
+          </div>
         )}
       </div>
 
