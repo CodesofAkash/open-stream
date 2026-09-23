@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/select";
 import { setBroadcastLive } from "@/actions/broadcast";
 
-import { useBroadcast } from "./broadcast-provider";
+import { useBroadcast } from "@/components/broadcast/broadcast-provider";
+import { useCompositor } from "@/components/broadcast/compositor-provider";
 
 /** Picker for one class of input device. */
 const DeviceSelect = ({
@@ -59,6 +60,7 @@ const DeviceSelect = ({
  */
 export const BroadcastStudio = () => {
   const { stop } = useBroadcast();
+  const { isComposing } = useCompositor();
   const {
     localParticipant,
     isCameraEnabled,
@@ -111,9 +113,14 @@ export const BroadcastStudio = () => {
       />
 
       <div className="flex flex-wrap items-center gap-2">
+        {/*
+          Studio mode publishes its canvas as the camera source, so toggling
+          the camera here would tear the composition down without saying so.
+        */}
         <Button
           variant={isCameraEnabled ? "secondary" : "outline"}
-          disabled={isBusy}
+          disabled={isBusy || isComposing}
+          title={isComposing ? "Managed by studio mode" : undefined}
           onClick={() =>
             guard(
               () => localParticipant.setCameraEnabled(!isCameraEnabled),
@@ -141,7 +148,8 @@ export const BroadcastStudio = () => {
 
         <Button
           variant={isScreenShareEnabled ? "default" : "outline"}
-          disabled={isBusy}
+          disabled={isBusy || isComposing}
+          title={isComposing ? "Your screen is already in the composition" : undefined}
           onClick={() =>
             guard(
               // audio: true also captures tab audio where the browser allows it.

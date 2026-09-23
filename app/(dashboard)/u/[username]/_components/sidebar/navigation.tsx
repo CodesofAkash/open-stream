@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
-import { Fullscreen, KeyRound, MessageSquare, Users } from "lucide-react";
+import { Fullscreen, KeyRound, Layers, MessageSquare, Users } from "lucide-react";
 import { NavItem, NavItemSkeleton } from "./nav-item";
 
 export const Navigation = () => {
@@ -15,6 +15,11 @@ export const Navigation = () => {
             label: "Stream",
             href: `/u/${user?.username}`,
             icon: Fullscreen,
+        },
+        {
+            label: "Studio",
+            href: `/u/${user?.username}/studio`,
+            icon: Layers,
         },
         {
             label: "Keys",
@@ -36,7 +41,7 @@ export const Navigation = () => {
     if(!user?.username) {
         return (
             <ul className="space-y-2">
-                {[...Array(4)].map((_, i) => (
+                {[...Array(5)].map((_, i) => (
                     <NavItemSkeleton key={i} />
                 ))}
             </ul>
