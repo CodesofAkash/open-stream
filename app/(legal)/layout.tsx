@@ -7,9 +7,10 @@ export default function LegalLayout({
 }) {
   return (
     <PublicChrome>
-      <div className="container max-w-4xl mx-auto py-10 px-4">
+      {/* <main>, not <div>: every page in this group needs a main landmark. */}
+      <main className="container max-w-4xl mx-auto py-10 px-4">
         {children}
-      </div>
+      </main>
     </PublicChrome>
   );
 }
