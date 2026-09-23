@@ -7,7 +7,8 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/u/", "/api/", "/sign-in", "/sign-up"],
+        // /u/ is the private creator dashboard, /studio is the CMS.
+        disallow: ["/u/", "/api/", "/sign-in", "/sign-up", "/studio"],
       },
     ],
     sitemap: `${contentConfig.project.baseUrl}/sitemap.xml`,

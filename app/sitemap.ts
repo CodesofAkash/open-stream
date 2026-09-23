@@ -20,6 +20,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
+  // The public marketing and legal pages. They were missing entirely, so the
+  // only things Google was told about were the home page, search, and channels
+  // — the /u/ dashboard is deliberately absent because it is private and
+  // disallowed in robots.txt.
+  const staticPages = ["/about", "/features", "/contact", "/privacy", "/terms"].map(
+    (path) => ({
+      url: `${baseUrl}${path}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: path === "/about" || path === "/features" ? 0.7 : 0.4,
+    }),
+  );
+
   return [
     {
       url: baseUrl,
@@ -27,6 +40,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "hourly",
       priority: 1,
     },
+    ...staticPages,
     {
       url: `${baseUrl}/search`,
       lastModified: new Date(),

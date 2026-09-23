@@ -56,7 +56,7 @@ export const ResultCard = ({ data }: ResultCardProps) => {
           )}
 
           {data.isLive && data.viewerCount > 0 && (
-            <p className="text-xs text-red-500 font-medium">
+            <p className="text-xs text-red-400 font-medium">
               {data.viewerCount.toLocaleString()} viewers
             </p>
           )}

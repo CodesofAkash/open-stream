@@ -13,6 +13,14 @@ const isPublicRoute = createRouteMatcher([
   '/studio(.*)',
   // Clerk's own Frontend API, proxied through this app. Must never require auth.
   '/__clerk(.*)',
+  // Machine-readable files. The matcher's extension exclusion deliberately
+  // keeps .json (`js(?!on)`), so without these the crawler and agent files are
+  // answered with a redirect to /sign-in instead of their content.
+  '/robots.txt',
+  '/sitemap.xml',
+  '/llms.txt',
+  '/ai-catalog.json',
+  '/.well-known(.*)',
 ])
 
 // Proxying Clerk through /__clerk is only needed on a domain that cannot have
