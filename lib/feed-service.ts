@@ -2,6 +2,58 @@ import { getSelf } from "@/lib/auth-service";
 import { db } from "@/lib/db";
 import { unstable_cache } from "next/cache";
 
+/**
+ * The stream list every anonymous visitor sees.
+ *
+ * Signed-in visitors get a personalised list that hides channels which blocked
+ * them, so only this shared version is cached. Thirty seconds keeps "who is
+ * live" fresh enough for a browse page while taking the query off the critical
+ * path of most visits — the homepage's time-to-first-byte was mostly spent
+ * waiting on it.
+ */
+const getPublicStreams = unstable_cache(
+  async () =>
+    db.stream.findMany({
+        select: {
+          id: true,
+          user: true,
+          isLive: true,
+          name: true,
+          thumbnailUrl: true,
+          viewerCount: true,
+          category: {
+            select: {
+              name: true,
+              slug: true,
+            },
+          },
+          tags: {
+            select: {
+              tag: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+            take: 3,
+          },
+        },
+        orderBy: [
+          {
+            isLive: "desc",
+          },
+          {
+            viewerCount: "desc",
+          },
+          {
+            updatedAt: "desc",
+          },
+        ],
+      }),
+  ["public-stream-feed"],
+  { revalidate: 30, tags: ["streams"] },
+);
+
 export const getStreams = async () => {
   let userId;
 
@@ -64,43 +116,7 @@ export const getStreams = async () => {
       ],
     });
   } else {
-    streams = await db.stream.findMany({
-      select: {
-        id: true,
-        user: true,
-        isLive: true,
-        name: true,
-        thumbnailUrl: true,
-        viewerCount: true,
-        category: {
-          select: {
-            name: true,
-            slug: true,
-          },
-        },
-        tags: {
-          select: {
-            tag: {
-              select: {
-                name: true,
-              },
-            },
-          },
-          take: 3,
-        },
-      },
-      orderBy: [
-        {
-          isLive: "desc",
-        },
-        {
-          viewerCount: "desc",
-        },
-        {
-          updatedAt: "desc",
-        },
-      ],
-    });
+    streams = await getPublicStreams();
   }
 
   // Transform the data to flatten category and tags

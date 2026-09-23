@@ -85,7 +85,7 @@ export default async function TermsPage() {
                 )}
                 {section.subsections && section.subsections.map((subsection) => (
                   <div key={subsection.title}>
-                    <h4 className="font-semibold mb-2">{subsection.title}</h4>
+                    <h2 className="font-semibold mb-2">{subsection.title}</h2>
                     {subsection.intro && <p className="text-muted-foreground mb-2">{subsection.intro}</p>}
                     {subsection.items && (
                       <ul className="list-disc pl-6 text-muted-foreground space-y-1">

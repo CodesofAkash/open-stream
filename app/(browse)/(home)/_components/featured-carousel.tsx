@@ -170,11 +170,16 @@ export const FeaturedCarousel = ({ streams }: FeaturedCarouselProps) => {
                 goToSlide(index);
               }}
               disabled={isTransitioning}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                index === currentIndex ? "w-8 bg-white" : "w-2 bg-white/50 hover:bg-white/75"
-              }`}
+              className="flex h-6 items-center px-1"
               aria-label={`Go to slide ${index + 1}`}
-            />
+              aria-current={index === currentIndex}
+            >
+              <span
+                className={`block h-2 rounded-full transition-all duration-300 ${
+                  index === currentIndex ? "w-8 bg-white" : "w-2 bg-white/50 hover:bg-white/75"
+                }`}
+              />
+            </button>
           ))}
         </div>
       )}
