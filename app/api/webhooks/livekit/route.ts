@@ -19,6 +19,48 @@ export async function POST(req: Request) {
 
   const event = await receiver.receive(body, authorization);
 
+  /**
+   * Browser broadcasts produce no ingress events — the host is an ordinary
+   * participant publishing camera and microphone. The client reports going
+   * live, but a closed laptop or lost connection never gets to say "stop", so
+   * these events are the safety net that stops a dead channel advertising
+   * itself as live.
+   *
+   * The room is named after the host's user id, and the broadcasting
+   * participant uses that same id as its identity.
+   */
+  if (event.event === "participant_left" || event.event === "room_finished") {
+    const roomName = event.room?.name;
+    const identity = event.participant?.identity;
+
+    // room_finished has no participant; a viewer leaving must not end the
+    // stream, so only the host's own departure counts.
+    if (roomName && (event.event === "room_finished" || identity === roomName)) {
+      await db.stream.updateMany({
+        where: { userId: roomName },
+        data: { isLive: false },
+      });
+      revalidateTag("streams", { expire: 0 });
+    }
+
+    return new Response("", { status: 200 });
+  }
+
+  if (event.event === "track_published") {
+    const roomName = event.room?.name;
+    const identity = event.participant?.identity;
+
+    if (roomName && identity === roomName) {
+      await db.stream.updateMany({
+        where: { userId: roomName },
+        data: { isLive: true },
+      });
+      revalidateTag("streams", { expire: 0 });
+    }
+
+    return new Response("", { status: 200 });
+  }
+
   const ingressId = event.ingressInfo?.ingressId;
 
   // Without an id there is nothing to match — and with updateMany an undefined
