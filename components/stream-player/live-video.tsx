@@ -55,17 +55,46 @@ export const LiveVideo = ({ participant }: LiveVideoProps) => {
   };
 
   useEventListener("fullscreenchange", handleFullscreenChange, wrapperRef as React.RefObject<HTMLElement>);
-  useTracks([Track.Source.Camera, Track.Source.Microphone])
-    .filter((track) => track.participant.identity === participant.identity)
-    .forEach((track) => {
-      if (videoRef.current) {
-        track.publication.track?.attach(videoRef.current);
-      }
-    });
+  const tracks = useTracks([Track.Source.Camera, Track.Source.Microphone]).filter(
+    (track) => track.participant.identity === participant.identity,
+  );
+
+  /**
+   * Attaching in an effect, not during render.
+   *
+   * This used to run in the component body, so every re-render re-attached the
+   * media stream to the <video> element and reset its decoding pipeline — which
+   * shows up as stuttering video and audio drifting out of sync. React can
+   * re-render for any reason at any time; media attachment is a side effect on
+   * a DOM node and belongs in an effect with a matching detach.
+   */
+  useEffect(() => {
+    const element = videoRef.current;
+    if (!element) return;
+
+    const attached = tracks
+      .map((track) => track.publication.track)
+      .filter((track): track is NonNullable<typeof track> => Boolean(track));
+
+    attached.forEach((track) => track.attach(element));
+
+    return () => {
+      attached.forEach((track) => track.detach(element));
+    };
+    // Keyed by the track sids so this re-runs when the tracks actually change,
+    // rather than on every render.
+  }, [tracks.map((track) => track.publication.trackSid).join(",")]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div ref={wrapperRef} className="relative h-full flex">
-      <video ref={videoRef} width="100%" />
+      <video
+        ref={videoRef}
+        width="100%"
+        autoPlay
+        playsInline
+        muted
+        className="h-full w-full object-contain"
+      />
       <div className="absolute top-0 h-full w-full opacity-0 hover:opacity-100 hover:transition-all">
         <div className="absolute bottom-0 flex h-14 w-full items-center justify-between bg-gradient-to-r from-neutral-900 px-4">
           <VolumeControl
