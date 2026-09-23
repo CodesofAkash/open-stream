@@ -138,8 +138,9 @@ export const FeaturedCarousel = ({ streams }: FeaturedCarouselProps) => {
               prevSlide();
             }}
             disabled={isTransitioning}
+            aria-label="Previous featured stream"
           >
-            <ChevronLeft className="h-8 w-8" />
+            <ChevronLeft className="size-8" aria-hidden="true" />
           </Button>
 
           <Button
@@ -151,8 +152,9 @@ export const FeaturedCarousel = ({ streams }: FeaturedCarouselProps) => {
               nextSlide();
             }}
             disabled={isTransitioning}
+            aria-label="Next featured stream"
           >
-            <ChevronRight className="h-8 w-8" />
+            <ChevronRight className="size-8" aria-hidden="true" />
           </Button>
         </>
       )}
