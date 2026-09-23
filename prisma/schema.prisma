@@ -22,6 +22,7 @@ model User {
   blocking   Block[]  @relation("Blocking")
   blockedBy  Block[]  @relation("BlockedBy")
   stream     Stream?
+  scenes     Scene[]
 
   @@index([username])
 }
@@ -142,4 +143,22 @@ model Suggestion {
   createdAt   DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// A saved studio layout: an ordered list of sources with their positions.
+// The sources are JSON because their shape belongs to the editor and changes
+// with it; every read parses rather than asserts (AK-CQ-011).
+model Scene {
+  id        String   @id @default(uuid())
+  name      String
+  sources   Json     @default("[]")
+  position  Int      @default(0)
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }

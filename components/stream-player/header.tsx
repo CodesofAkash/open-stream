@@ -73,7 +73,9 @@ export const Header = ({
       <Actions
         isFollowing={isFollowing}
         hostIdentity={hostIdentity}
+        hostName={hostName}
         isHost={isHost}
+        isLive={isLive}
       />
     </div>
   );
