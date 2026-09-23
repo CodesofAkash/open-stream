@@ -24,7 +24,7 @@ export const JsonLd = ({ data }: Props) => {
       type="application/ld+json"
       // Serialised from a parsed object, and < is escaped so the value cannot
       // close this script tag early.
-      dangerouslySetInnerHTML={{ __html: serialised.replace(/</g, "\u003c") }}
+      dangerouslySetInnerHTML={{ __html: serialised.replace(/</g, "\\u003c") }}
     />
   );
 };
