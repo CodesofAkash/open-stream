@@ -31,7 +31,7 @@ const KeysPage = async ({ params }: KeysPageProps) => {
           for several streamers at once, and it needs no setup. The ingress
           keys below are for anyone who wants OBS.
         */}
-        <BrowserBroadcast />
+        <BrowserBroadcast username={self.username} />
         <UrlCard value={self.stream?.serverUrl || null} />
         <KeyCard value={self.stream?.streamKey || null} />
       </div>
