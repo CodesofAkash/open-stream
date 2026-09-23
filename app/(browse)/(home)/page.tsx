@@ -6,6 +6,7 @@ import { Categories, CategoriesSkeleton } from "./_components/categories";
 import { RecommendedChannels, RecommendedChannelsSkeleton } from "./_components/recommended-channels";
 import { getStreams } from "@/lib/feed-service";
 import { Footer } from "@/components/footer";
+import { AutoRefresh } from "../_components/auto-refresh";
 import { contentConfig } from "@/lib/content-config";
 
 export const metadata: Metadata = {
@@ -101,6 +102,13 @@ export default async function Home() {
       </section>
 
       {/* Footer - ONLY on homepage */}
+      {/*
+        Only the browse lists need polling. It used to sit in the (browse)
+        layout, which also wraps the channel page — so watching a stream
+        triggered a full server refetch and re-render every 30 seconds,
+        interrupting playback.
+      */}
+      <AutoRefresh />
       <Footer />
     </main>
   );
