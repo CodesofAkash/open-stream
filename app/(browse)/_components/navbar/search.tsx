@@ -37,12 +37,13 @@ export const Search = () => {
             onChange={(e) => setValue(e.target.value)}
             />
             {value && (
-                <X onClick={onClear}
-                    className="absolute top-2.5 right-14 h-5 w-5 text-muted-foreground cursor-pointer hover:opacity-75 transition"
-                />
+                <button type="button" onClick={onClear} aria-label="Clear search"
+                    className="absolute top-2.5 right-14 text-muted-foreground cursor-pointer hover:opacity-75 transition">
+                    <X className="size-5" aria-hidden="true" />
+                </button>
             )}
-            <Button type="submit" size="sm" variant={"secondary"} className="rounded-l-none">
-                <SearchIcon className="h-5 w-5 text-muted-foreground" />
+            <Button type="submit" size="sm" variant={"secondary"} className="rounded-l-none" aria-label="Search">
+                <SearchIcon className="size-5 text-muted-foreground" aria-hidden="true" />
             </Button>
         </form>
     );

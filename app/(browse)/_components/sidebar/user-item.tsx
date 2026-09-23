@@ -24,6 +24,7 @@ export const UserItem = ({ username, imageUrl, isLive }: UserItemProps) => {
     const isActive = pathname === href;
 
     return (
+        <li className="list-none">
         <Button
         asChild
         variant="ghost"
@@ -44,7 +45,11 @@ export const UserItem = ({ username, imageUrl, isLive }: UserItemProps) => {
                         isLive={isLive}
                         showBadge={false}
                     />
-                    {!collapsed && (
+                    {collapsed ? (
+                        // Collapsed shows only the avatar, so the link would have
+                        // no text for a screen reader to announce.
+                        <span className="sr-only">{username}</span>
+                    ) : (
                         <p className="truncate">
                             {username}
                         </p>
@@ -55,6 +60,7 @@ export const UserItem = ({ username, imageUrl, isLive }: UserItemProps) => {
                 </div>
             </Link>
         </Button>
+        </li>
     )
 }
 
