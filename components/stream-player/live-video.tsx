@@ -3,6 +3,9 @@
 import { Participant, Track } from "livekit-client";
 import { useRef, useState, useEffect } from "react";
 import { useTracks } from "@livekit/components-react";
+import { Volume2 } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import { FullscreenControl } from "./fullscreen-control";
 import { useEventListener } from "usehooks-ts";
 import { VolumeControl } from "./volume-control";
@@ -37,10 +40,6 @@ export const LiveVideo = ({ participant }: LiveVideoProps) => {
       videoRef.current.volume = isMuted ? 0.5 : 0;
     }
   };
-
-  useEffect(() => {
-    onVolumeChange(0);
-  }, []);
 
   const toggleFullscreen = () => {
     if (isFullscreen) {
@@ -129,6 +128,21 @@ export const LiveVideo = ({ participant }: LiveVideoProps) => {
         muted
         className="h-full w-full object-contain"
       />
+      {/*
+        Browsers only autoplay muted video, so every viewer starts muted and
+        the volume control is easy to miss — which reads as "this stream has no
+        sound". One obvious button beats a slider nobody finds.
+      */}
+      {volume === 0 && (
+        <Button
+          size="sm"
+          onClick={toggleMute}
+          className="absolute inset-x-0 top-4 z-10 mx-auto w-fit rounded-full bg-black/80 text-white hover:bg-black"
+        >
+          <Volume2 className="mr-2 size-4" aria-hidden="true" />
+          Click to unmute
+        </Button>
+      )}
       {isSharingScreen ? (
         <video
           ref={cameraRef}

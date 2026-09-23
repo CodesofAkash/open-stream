@@ -1,9 +1,10 @@
 "use client";
 
 import { useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Heart } from "lucide-react";
+import { Heart, Radio, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,14 +13,18 @@ import { useAuth } from "@clerk/nextjs";
 
 interface ActionsProps {
   hostIdentity: string;
+  hostName: string;
   isFollowing: boolean;
   isHost: boolean;
+  isLive: boolean;
 }
 
 export const Actions = ({
   hostIdentity,
+  hostName,
   isFollowing,
   isHost,
+  isLive,
 }: ActionsProps) => {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -61,9 +66,31 @@ export const Actions = ({
     }
   };
 
+  // Nobody follows themselves, so a disabled Unfollow is wasted space on the
+  // one screen where a streamer most wants to start streaming.
+  if (isHost) {
+    return (
+      <Button
+        asChild
+        size="sm"
+        variant={isLive ? "secondary" : "default"}
+        className={isLive ? "w-full lg:w-auto" : "w-full bg-rose-600 text-white hover:bg-rose-700 lg:w-auto"}
+      >
+        <Link href={`/u/${hostName}/studio`}>
+          {isLive ? (
+            <SlidersHorizontal className="mr-2 size-4" aria-hidden="true" />
+          ) : (
+            <Radio className="mr-2 size-4" aria-hidden="true" />
+          )}
+          {isLive ? "Open Studio" : "Go live"}
+        </Link>
+      </Button>
+    );
+  }
+
   return (
     <Button
-      disabled={isPending || isHost}
+      disabled={isPending}
       onClick={toggleFollow}
       variant="primary"
       size="sm"

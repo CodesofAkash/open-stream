@@ -13,7 +13,7 @@ import { OfflineIndicator } from "@/components/offline-indicator";
 
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-import { BroadcastProvider } from "@/components/broadcast/broadcast-provider";
+import StudioProvider from "@/components/studio/studio-provider";
 import { SanityLive } from "@/sanity/live";
 
 export default function RootLayout({
@@ -46,10 +46,11 @@ export default function RootLayout({
             <Toaster theme="light" position="bottom-center" />
             <OfflineIndicator />
             {/*
-              Wraps the app so a live broadcast is not torn down by navigation.
-              Renders nothing until the streamer actually goes live.
+              Wraps the app so neither a broadcast nor a studio setup is torn
+              down by navigation. Nothing loads until a streamer opens the
+              studio, so a visitor pays nothing for it.
             */}
-            <BroadcastProvider>{children}</BroadcastProvider>
+            <StudioProvider>{children}</StudioProvider>
           </ThemeProvider>
           {/*
             Mounted unconditionally. Gating <SanityLive /> on draft mode freezes

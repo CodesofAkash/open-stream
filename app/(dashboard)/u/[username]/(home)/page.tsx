@@ -3,7 +3,6 @@ import { getUserByUsername } from "@/lib/user-service";
 import { currentUser } from "@clerk/nextjs/server";
 import { getAllCategories } from "@/lib/category-service";
 import { db } from "@/lib/db";
-import { BrowserBroadcast } from "./_components/browser-broadcast";
 
 interface CreatorPageProps {
   params: Promise<{
@@ -50,7 +49,7 @@ const CreatorPage = async ({ params }: CreatorPageProps) => {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="h-full">
       <StreamPlayer
         user={user}
         stream={user.stream}
@@ -58,13 +57,6 @@ const CreatorPage = async ({ params }: CreatorPageProps) => {
         streamWithCategoryAndTags={streamWithCategoryAndTags}
         isFollowing
       />
-      {/*
-        Going live belongs beside the player that shows whether you are, not
-        buried in the stream keys — those are only for the OBS route.
-      */}
-      <div className="px-4 pb-6">
-        <BrowserBroadcast username={user.username} />
-      </div>
     </div>
   );
 };

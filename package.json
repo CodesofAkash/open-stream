@@ -43,6 +43,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
     "jwt-decode": "^4.0.0",
+    "konva": "^10.6.0",
     "livekit-client": "^2.22.3",
     "livekit-server-sdk": "^2.19.1",
     "lucide-react": "^1.47.0",
@@ -56,6 +57,7 @@
     "query-string": "^9.5.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "react-konva": "^19.3.0",
     "sanity": "^6.15.0",
     "sonner": "^2.0.8",
     "styled-components": "^6.5.3",
@@ -64,6 +66,7 @@
     "uploadthing": "^7.7.4",
     "usehooks-ts": "^3.1.1",
     "uuid": "^14.0.2",
+    "zod": "^4.6.5",
     "zustand": "^5.0.15"
   },
   "devDependencies": {

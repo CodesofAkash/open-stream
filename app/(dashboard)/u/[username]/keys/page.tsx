@@ -33,10 +33,13 @@ const KeysPage = async ({ params }: KeysPageProps) => {
       <p className="mb-4 text-sm text-muted-foreground">
         Point OBS, Streamlabs or any RTMP/WHIP encoder at these. To stream without
         installing anything, use the{" "}
-        <Link href={`/u/${self.username}`} className="text-primary underline underline-offset-4">
-          Stream
+        <Link
+          href={`/u/${self.username}/studio`}
+          className="text-primary underline underline-offset-4"
+        >
+          Studio
         </Link>{" "}
-        tab instead.
+        instead.
       </p>
       <div className="space-y-4">
         <UrlCard value={self.stream?.serverUrl || null} />

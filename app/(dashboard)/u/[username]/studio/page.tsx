@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { getSelfByUsername } from "@/lib/auth-service";
-import StudioPanel from "./_components/studio-panel";
+import StudioWorkspace from "@/components/studio/studio-workspace";
 
 interface StudioPageProps {
   params: Promise<{
@@ -20,7 +20,7 @@ const StudioPage = async ({ params }: StudioPageProps) => {
   return (
     <div className="p-6">
       <h1 className="mb-4 text-2xl font-bold">Studio</h1>
-      <StudioPanel username={self.username} />
+      <StudioWorkspace username={self.username} />
     </div>
   );
 };
