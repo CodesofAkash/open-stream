@@ -26,6 +26,9 @@ export const Video = ({ hostName, hostIdentity }: VideoProps) => {
   const tracks = useTracks([
     Track.Source.Camera,
     Track.Source.Microphone,
+    // Without this a screen share publishes fine but viewers see nothing.
+    Track.Source.ScreenShare,
+    Track.Source.ScreenShareAudio,
   ]).filter((track) => track.participant.identity === hostIdentity);
 
   /**
