@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/hint";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useCreatorSidebar } from "@/store/use-creator-sidebar";
@@ -18,7 +19,7 @@ export const NavItem = ({icon: Icon, label, href, isActive}: NavItemProps) => {
 
     const { collapsed } = useCreatorSidebar((state) => state);
 
-    return (
+    const item = (
         <Button
             asChild
             variant="ghost"
@@ -42,7 +43,19 @@ export const NavItem = ({icon: Icon, label, href, isActive}: NavItemProps) => {
                 </div>
             </Link>
         </Button>
-    )
+    );
+
+    // Collapsed, the label is the only thing identifying where a link goes.
+    // Hint also supplies the accessible name, so this helps screen readers too.
+    return collapsed ? (
+        <li className="list-none">
+            <Hint label={label} side="right" asChild>
+                {item}
+            </Hint>
+        </li>
+    ) : (
+        <li className="list-none">{item}</li>
+    );
 }
 
 export const NavItemSkeleton = () => {

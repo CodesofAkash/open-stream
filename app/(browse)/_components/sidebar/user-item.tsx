@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { UserAvatar } from "@/components/user-avatar";
 import { LiveBadge } from "@/components/live-badge";
+import { Hint } from "@/components/hint";
 
 interface UserItemProps {
     username: string;
@@ -23,8 +24,7 @@ export const UserItem = ({ username, imageUrl, isLive }: UserItemProps) => {
     const href = `/${username}`;
     const isActive = pathname === href;
 
-    return (
-        <li className="list-none">
+    const item = (
         <Button
         asChild
         variant="ghost"
@@ -60,8 +60,19 @@ export const UserItem = ({ username, imageUrl, isLive }: UserItemProps) => {
                 </div>
             </Link>
         </Button>
+    );
+
+    return (
+        <li className="list-none">
+            {collapsed ? (
+                <Hint label={username} side="right" asChild>
+                    {item}
+                </Hint>
+            ) : (
+                item
+            )}
         </li>
-    )
+    );
 }
 
 export const UserItemSkeleton = () => {
