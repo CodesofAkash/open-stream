@@ -1,12 +1,13 @@
 "use client";
 
-import { Participant, Track } from "livekit-client";
+import { Participant, RemoteTrackPublication, Track } from "livekit-client";
 import { useRef, useState, useEffect } from "react";
 import { useTracks } from "@livekit/components-react";
 import { Volume2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { FullscreenControl } from "./fullscreen-control";
+import { QualityControl } from "./quality-control";
 import { useEventListener } from "usehooks-ts";
 import { VolumeControl } from "./volume-control";
 
@@ -66,6 +67,12 @@ export const LiveVideo = ({ participant }: LiveVideoProps) => {
   // moves to a corner — the layout every streaming platform uses, and the one
   // a viewer expects. Publishing them as two tracks means neither is
   // re-encoded and the viewer sees each at its native quality.
+  // The composed picture publishes as the camera source, so that is the one a
+  // viewer would want smaller.
+  const cameraPublication = tracks.find(
+    (track) => track.publication.source === Track.Source.Camera,
+  )?.publication;
+
   const screenTrack = tracks.find(
     (track) => track.publication.source === Track.Source.ScreenShare,
   );
@@ -159,10 +166,19 @@ export const LiveVideo = ({ participant }: LiveVideoProps) => {
             value={volume}
             onToggle={toggleMute}
           />
-          <FullscreenControl
-            isFullscreen={isFullscreen}
-            onToggle={toggleFullscreen}
-          />
+          <div className="flex items-center gap-2">
+            <QualityControl
+              publication={
+                cameraPublication instanceof RemoteTrackPublication
+                  ? cameraPublication
+                  : undefined
+              }
+            />
+            <FullscreenControl
+              isFullscreen={isFullscreen}
+              onToggle={toggleFullscreen}
+            />
+          </div>
         </div>
       </div>
     </div>

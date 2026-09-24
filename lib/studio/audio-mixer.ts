@@ -33,11 +33,24 @@ interface MixerChannel extends MixerChannelState {
 class AudioMixer {
   private context: AudioContext;
   private destination: MediaStreamAudioDestinationNode;
+  private master: DynamicsCompressorNode;
   private channels = new Map<string, MixerChannel>();
 
   constructor() {
+    // Left to the hardware: forcing 48kHz resamples every device that does
+    // not run at it, and that resampling is heard as crackling.
     this.context = new AudioContext();
     this.destination = this.context.createMediaStreamDestination();
+
+    // Two sources at full scale sum past what a sample can hold and the
+    // overflow clips, which is the other thing crackling turns out to be.
+    this.master = this.context.createDynamicsCompressor();
+    this.master.threshold.value = -3;
+    this.master.knee.value = 0;
+    this.master.ratio.value = 20;
+    this.master.attack.value = 0.003;
+    this.master.release.value = 0.25;
+    this.master.connect(this.destination);
   }
 
   /** The mixed result, ready to publish. */
@@ -71,7 +84,7 @@ class AudioMixer {
     gain.gain.value = volume;
     source.connect(gain);
     gain.connect(analyser);
-    gain.connect(this.destination);
+    gain.connect(this.master);
 
     this.channels.set(id, {
       id,

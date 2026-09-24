@@ -1,12 +1,13 @@
 "use client";
 
 import {
-  ChevronDown,
-  ChevronUp,
   Eye,
   EyeOff,
+  FileAudio,
+  FileVideo,
   Image as ImageIcon,
   Lock,
+  Mic,
   MonitorUp,
   Palette,
   Trash2,
@@ -16,14 +17,16 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Hint } from "@/components/hint";
 import { useStudio } from "@/components/studio/studio-provider";
+import { SortableList, SortableRow } from "@/components/studio/panels/sortable-list";
 import type { SourceKind } from "@/lib/studio/scene";
 
 const KINDS: { kind: SourceKind; label: string; icon: typeof Video }[] = [
   { kind: "camera", label: "Camera", icon: Video },
   { kind: "screen", label: "Screen", icon: MonitorUp },
   { kind: "image", label: "Image", icon: ImageIcon },
+  { kind: "video", label: "Video file", icon: FileVideo },
+  { kind: "audio", label: "Audio file", icon: FileAudio },
   { kind: "text", label: "Text", icon: Type },
   { kind: "color", label: "Colour", icon: Palette },
 ];
@@ -31,14 +34,15 @@ const KINDS: { kind: SourceKind; label: string; icon: typeof Video }[] = [
 function SourcesPanel() {
   const {
     activeScene,
-    selectedSourceId,
+    selectedSourceIds,
     selectSource,
     addSource,
     updateSource,
     removeSource,
-    moveSource,
+    reorderSources,
     captures,
     toggleCapture,
+    channels,
   } = useStudio();
 
   const add = async (kind: SourceKind) => {
@@ -53,22 +57,26 @@ function SourcesPanel() {
 
   const sources = activeScene?.sources ?? [];
 
+  // Last in the scene is drawn last, so it is in front — which is the top of
+  // the list here, the way every editor shows layers.
+  const layered = [...sources].reverse();
+
   return (
-    <section className="flex h-full flex-col gap-3" aria-labelledby="sources-heading">
+    <section className="space-y-3" aria-labelledby="sources-heading">
       <h2 id="sources-heading" className="text-sm font-semibold uppercase tracking-wide">
         Sources
       </h2>
 
-      {/* Topmost in the list is drawn last, so it sits in front. */}
-      <ul className="flex-1 space-y-1 overflow-y-auto">
-        {[...sources].reverse().map((source) => (
-          <li
+      <SortableList
+        label="Sources, front to back"
+        ids={layered.map((source) => source.id)}
+        onReorder={(ids) => reorderSources([...ids].reverse())}
+      >
+        {layered.map((source) => (
+          <SortableRow
             key={source.id}
-            className={
-              source.id === selectedSourceId
-                ? "flex items-center gap-1 rounded-md bg-muted px-1"
-                : "flex items-center gap-1 rounded-md px-1"
-            }
+            id={source.id}
+            isActive={selectedSourceIds.includes(source.id)}
           >
             <Button
               variant="ghost"
@@ -79,68 +87,74 @@ function SourcesPanel() {
               {source.name}
             </Button>
 
-            <Hint label={source.visible ? "Hide" : "Show"} asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => updateSource(source.id, { visible: !source.visible })}
-              >
-                {source.visible ? (
-                  <Eye className="size-4" aria-hidden="true" />
-                ) : (
-                  <EyeOff className="size-4" aria-hidden="true" />
-                )}
-              </Button>
-            </Hint>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={source.visible ? `Hide ${source.name}` : `Show ${source.name}`}
+              onClick={() => updateSource(source.id, { visible: !source.visible })}
+            >
+              {source.visible ? (
+                <Eye className="size-4" aria-hidden="true" />
+              ) : (
+                <EyeOff className="size-4 text-muted-foreground" aria-hidden="true" />
+              )}
+            </Button>
 
-            <Hint label={source.locked ? "Unlock" : "Lock"} asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => updateSource(source.id, { locked: !source.locked })}
-              >
-                {source.locked ? (
-                  <Lock className="size-4" aria-hidden="true" />
-                ) : (
-                  <Unlock className="size-4" aria-hidden="true" />
-                )}
-              </Button>
-            </Hint>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={source.locked ? `Unlock ${source.name}` : `Lock ${source.name}`}
+              onClick={() => updateSource(source.id, { locked: !source.locked })}
+            >
+              {source.locked ? (
+                <Lock className="size-4 text-amber-500" aria-hidden="true" />
+              ) : (
+                <Unlock className="size-4" aria-hidden="true" />
+              )}
+            </Button>
 
-            <Hint label="Bring forward" asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => moveSource(source.id, "forward")}
-              >
-                <ChevronUp className="size-4" aria-hidden="true" />
-              </Button>
-            </Hint>
-
-            <Hint label="Send backward" asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => moveSource(source.id, "backward")}
-              >
-                <ChevronDown className="size-4" aria-hidden="true" />
-              </Button>
-            </Hint>
-
-            <Hint label="Remove" asChild>
-              <Button variant="ghost" size="sm" onClick={() => removeSource(source.id)}>
-                <Trash2 className="size-4" aria-hidden="true" />
-              </Button>
-            </Hint>
-          </li>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={`Remove ${source.name}`}
+              onClick={() => removeSource(source.id)}
+            >
+              <Trash2 className="size-4" aria-hidden="true" />
+            </Button>
+          </SortableRow>
         ))}
+      </SortableList>
 
-        {sources.length === 0 && (
-          <li className="px-2 py-6 text-center text-sm text-muted-foreground">
-            Nothing in this scene yet. Add a source below.
-          </li>
-        )}
-      </ul>
+      {sources.length === 0 && (
+        <p className="px-2 py-6 text-center text-sm text-muted-foreground">
+          Nothing in this scene yet. Add a source below.
+        </p>
+      )}
+
+      {/*
+        Sound has no place on the canvas but is every bit a source, so it is
+        listed here rather than left to be guessed at from the mixer.
+      */}
+      {channels.length > 0 && (
+        <ul className="space-y-1 border-t border-border pt-3" aria-label="Audio sources">
+          {channels.map((channel) => (
+            <li key={channel.id} className="flex items-center gap-1 rounded-md px-1">
+              <Mic className="ml-2 size-4 text-muted-foreground" aria-hidden="true" />
+              <span className="flex-1 truncate px-2 text-sm">{channel.label}</span>
+              {channel.id === "microphone" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Remove microphone"
+                  onClick={() => void toggleCapture("microphone")}
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {KINDS.map(({ kind, label, icon: Icon }) => (
@@ -149,6 +163,16 @@ function SourcesPanel() {
             {label}
           </Button>
         ))}
+
+        <Button
+          variant={captures.microphone ? "secondary" : "outline"}
+          size="sm"
+          aria-pressed={captures.microphone}
+          onClick={() => void toggleCapture("microphone")}
+        >
+          <Mic className="mr-2 size-4" aria-hidden="true" />
+          Microphone
+        </Button>
       </div>
     </section>
   );

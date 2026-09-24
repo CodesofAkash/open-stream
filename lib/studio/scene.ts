@@ -30,20 +30,37 @@ const transform = {
   locked: z.boolean().default(false),
 };
 
+// Cut away each side as a fraction, not pixels, so a camera or a shared
+// window that changes resolution keeps the same framing.
+const cropSchema = z
+  .object({
+    top: z.number().min(0).max(0.45).default(0),
+    right: z.number().min(0).max(0.45).default(0),
+    bottom: z.number().min(0).max(0.45).default(0),
+    left: z.number().min(0).max(0.45).default(0),
+  })
+  .default({ top: 0, right: 0, bottom: 0, left: 0 });
+
 const cameraSourceSchema = z.object({
   ...transform,
   kind: z.literal("camera"),
+  crop: cropSchema,
+  flipHorizontal: z.boolean().default(false),
 });
 
 const screenSourceSchema = z.object({
   ...transform,
   kind: z.literal("screen"),
+  crop: cropSchema,
+  flipHorizontal: z.boolean().default(false),
 });
 
 const imageSourceSchema = z.object({
   ...transform,
   kind: z.literal("image"),
   url: z.string(),
+  crop: cropSchema,
+  flipHorizontal: z.boolean().default(false),
 });
 
 const textSourceSchema = z.object({
@@ -62,7 +79,27 @@ const colorSourceSchema = z.object({
   cornerRadius: z.number().min(0).default(0),
 });
 
+// Video draws like any other picture and its sound joins the mixer; audio is
+// the same thing with no picture, which is why they share these fields.
+const videoSourceSchema = z.object({
+  ...transform,
+  kind: z.literal("video"),
+  url: z.string(),
+  loop: z.boolean().default(false),
+  crop: cropSchema,
+  flipHorizontal: z.boolean().default(false),
+});
+
+const audioSourceSchema = z.object({
+  ...transform,
+  kind: z.literal("audio"),
+  url: z.string(),
+  loop: z.boolean().default(true),
+});
+
 const sceneSourceSchema = z.discriminatedUnion("kind", [
+  videoSourceSchema,
+  audioSourceSchema,
   cameraSourceSchema,
   screenSourceSchema,
   imageSourceSchema,
@@ -112,13 +149,35 @@ function createSource(kind: SourceKind, index: number): SceneSource {
     locked: false,
   };
 
+  const crop = { top: 0, right: 0, bottom: 0, left: 0 };
+  const flipHorizontal = false;
+
   switch (kind) {
     case "camera":
-      return { ...base, kind, name: "Camera", width: 480, height: 270 };
+      return { ...base, kind, name: "Camera", width: 480, height: 270, crop, flipHorizontal };
     case "screen":
-      return { ...base, kind, name: "Screen", x: 0, y: 0, width: CANVAS_WIDTH, height: CANVAS_HEIGHT };
+      return {
+        ...base,
+        kind,
+        name: "Screen",
+        x: 0,
+        y: 0,
+        width: CANVAS_WIDTH,
+        height: CANVAS_HEIGHT,
+        crop,
+        flipHorizontal,
+      };
     case "image":
-      return { ...base, kind, name: "Image", width: 320, height: 320, url: "" };
+      return {
+        ...base,
+        kind,
+        name: "Image",
+        width: 320,
+        height: 320,
+        url: "",
+        crop,
+        flipHorizontal,
+      };
     case "text":
       return {
         ...base,
@@ -131,6 +190,23 @@ function createSource(kind: SourceKind, index: number): SceneSource {
         fill: "#ffffff",
         bold: true,
       };
+    case "video":
+      return {
+        ...base,
+        kind,
+        name: "Video",
+        x: 0,
+        y: 0,
+        width: CANVAS_WIDTH,
+        height: CANVAS_HEIGHT,
+        url: "",
+        loop: false,
+        crop,
+        flipHorizontal,
+      };
+    case "audio":
+      // No picture, but it still needs a box the schema can describe.
+      return { ...base, kind, name: "Audio", width: 320, height: 64, url: "", loop: true };
     case "color":
       return {
         ...base,
@@ -171,4 +247,6 @@ export {
   parseSources,
   sceneSourceSchema,
 };
-export type { Scene, SceneSource, SourceKind };
+type SourceCrop = z.infer<typeof cropSchema>;
+
+export type { Scene, SceneSource, SourceCrop, SourceKind };
