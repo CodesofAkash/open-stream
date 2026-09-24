@@ -3,6 +3,8 @@
 import { LiveKitRoom } from "@livekit/components-react";
 import { useViewerToken } from "@/hooks/use-viewer-token";
 import { Video, VideoSkeleton } from "./video";
+import { VideoError } from "./video-error";
+import { StreamPlayerErrorBoundary } from "./error-boundary";
 import { useChatSidebar } from "@/store/use-chat-sidebar";
 import { cn } from "@/lib/utils";
 import { Chat, ChatSkeleton } from "./chat";
@@ -73,7 +75,9 @@ export const StreamPlayer = ({
         )}
       >
         <div className="space-y-3 sm:space-y-4 col-span-1 lg:col-span-2 xl:col-span-2 2xl:col-span-5 lg:overflow-y-auto hidden-scrollbar pb-6 sm:pb-10">
-          <Video hostName={user.username} hostIdentity={user.id} />
+          <StreamPlayerErrorBoundary fallback={<VideoError />}>
+            <Video hostName={user.username} hostIdentity={user.id} />
+          </StreamPlayerErrorBoundary>
           <Header
             hostName={user.username}
             hostIdentity={user.id}

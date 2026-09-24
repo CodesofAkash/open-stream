@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Lets a verification build write somewhere else, so compiling never pulls
+  // the directory out from under a server someone is testing on.
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
+
   images: {
     remotePatterns: [
       {

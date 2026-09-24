@@ -58,6 +58,36 @@ const createScene = async (name: string) => {
   return { id: scene.id };
 };
 
+const renameScene = async (id: string, name: string) => {
+  const self = await getSelf();
+  const parsed = z.string().trim().min(1).max(60).parse(name);
+
+  const result = await db.scene.updateMany({
+    where: { id, userId: self.id },
+    data: { name: parsed },
+  });
+
+  if (result.count === 0) throw new Error("Scene not found");
+
+  return { id, name: parsed };
+};
+
+/** Persists the order the streamer dragged the scenes into. */
+const reorderScenes = async (ids: string[]) => {
+  const self = await getSelf();
+  const parsed = z.array(z.string().min(1)).max(100).parse(ids);
+
+  // One transaction, and each update is still scoped to the owner, so a
+  // guessed id in the list cannot reorder somebody else's scenes.
+  await db.$transaction(
+    parsed.map((id, position) =>
+      db.scene.updateMany({ where: { id, userId: self.id }, data: { position } }),
+    ),
+  );
+
+  return { count: parsed.length };
+};
+
 const deleteScene = async (id: string) => {
   const self = await getSelf();
 
@@ -70,4 +100,4 @@ const deleteScene = async (id: string) => {
   return { id };
 };
 
-export { createScene, deleteScene, listScenes, saveScene };
+export { createScene, deleteScene, listScenes, renameScene, reorderScenes, saveScene };

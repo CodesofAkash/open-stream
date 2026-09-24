@@ -33,6 +33,27 @@ export const ourFileRouter = {
     .onUploadComplete(async ({ file }) => {
       return { fileUrl: file.ufsUrl };
     }),
+
+  // A clip a streamer plays into a scene rather than capturing live — an
+  // intro, a highlight, a pre-recorded segment.
+  sceneVideoUploader: f({ video: { maxFileSize: "64MB", maxFileCount: 1 } })
+    .middleware(async () => {
+      const self = await getSelf();
+      return { user: self };
+    })
+    .onUploadComplete(async ({ file }) => {
+      return { fileUrl: file.ufsUrl };
+    }),
+
+  // A track that plays with no picture — background music, a jingle.
+  sceneAudioUploader: f({ audio: { maxFileSize: "16MB", maxFileCount: 1 } })
+    .middleware(async () => {
+      const self = await getSelf();
+      return { user: self };
+    })
+    .onUploadComplete(async ({ file }) => {
+      return { fileUrl: file.ufsUrl };
+    }),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;
