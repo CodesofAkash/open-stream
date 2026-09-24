@@ -4,6 +4,16 @@ import Link from "next/link";
 import { Mic, MonitorUp, Radio, Save, Video } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { QUALITY_PRESETS, type QualityHeight } from "@/lib/studio/quality";
 import { useStudio } from "@/components/studio/studio-provider";
 
 // Capture on the left, broadcasting on the right: setting up and going live
@@ -19,6 +29,12 @@ function ControlsPanel({ username }: { username: string }) {
     isDirty,
     isSaving,
     saveActiveScene,
+    quality,
+    setQuality,
+    adaptive,
+    setAdaptive,
+    directMode,
+    setDirectMode,
   } = useStudio();
 
   const devices = [
@@ -41,6 +57,53 @@ function ControlsPanel({ username }: { username: string }) {
           {label} {captures[kind] ? "on" : "off"}
         </Button>
       ))}
+
+      {/* Changing this while live re-sizes the canvas viewers receive, so it
+          is offered only before going live. */}
+      <Select
+        value={String(quality)}
+        disabled={isLive}
+        onValueChange={(value) => setQuality(Number(value) as QualityHeight)}
+      >
+        <SelectTrigger className="w-32" aria-label="Output quality">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {Object.entries(QUALITY_PRESETS).map(([height, preset]) => (
+            <SelectItem key={height} value={height}>
+              {preset.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {/* Skips the canvas entirely when the scene is one full-frame capture:
+          no compositing, no re-encode, native resolution. */}
+      <div className="flex items-center gap-2">
+        <Switch
+          id="direct"
+          checked={directMode}
+          disabled={isLive}
+          onCheckedChange={setDirectMode}
+        />
+        <Label htmlFor="direct" className="text-xs text-muted-foreground">
+          Direct mode
+        </Label>
+      </div>
+
+      {/* Several sizes means several encodes, which is the streamer's CPU
+          paying for the viewer's choice. */}
+      <div className="flex items-center gap-2">
+        <Switch
+          id="adaptive"
+          checked={adaptive}
+          disabled={isLive}
+          onCheckedChange={setAdaptive}
+        />
+        <Label htmlFor="adaptive" className="text-xs text-muted-foreground">
+          Viewer quality choice
+        </Label>
+      </div>
 
       <Button
         variant="outline"

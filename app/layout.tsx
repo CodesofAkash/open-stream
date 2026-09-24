@@ -5,7 +5,6 @@ import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
 
-import { ThemeProvider } from "@/components/theme-provider";
 import { contentConfig } from "@/lib/content-config";
 
 import { Toaster } from 'sonner'
@@ -37,21 +36,19 @@ export default function RootLayout({
           design change, not a performance one.
         */}
         <body className="font-sans antialiased">
-          <ThemeProvider
-            attribute="class"
-            forcedTheme="dark"
-            storageKey="open-stream-theme"
-            disableTransitionOnChange
-          >
-            <Toaster theme="light" position="bottom-center" />
-            <OfflineIndicator />
-            {/*
-              Wraps the app so neither a broadcast nor a studio setup is torn
-              down by navigation. Nothing loads until a streamer opens the
-              studio, so a visitor pays nothing for it.
-            */}
-            <StudioProvider>{children}</StudioProvider>
-          </ThemeProvider>
+          {/*
+            No theme provider: the theme is forced dark on <html> above, and
+            next-themes injected a script during a client render, which React
+            refuses to execute and reports as an error.
+          */}
+          <Toaster theme="light" position="bottom-center" />
+          <OfflineIndicator />
+          {/*
+            Wraps the app so neither a broadcast nor a studio setup is torn
+            down by navigation. Nothing loads until a streamer opens the
+            studio, so a visitor pays nothing for it.
+          */}
+          <StudioProvider>{children}</StudioProvider>
           {/*
             Mounted unconditionally. Gating <SanityLive /> on draft mode freezes
             production at build time while dev looks perfect (AK-SAN-008), and

@@ -1,20 +1,92 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { Crop, FlipHorizontal, Pause, Play, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { UploadButton } from "@/lib/uploadthing";
-import { CANVAS_HEIGHT, CANVAS_WIDTH } from "@/lib/studio/scene";
+import { CANVAS_HEIGHT, CANVAS_WIDTH, createSource } from "@/lib/studio/scene";
 import { useStudio } from "@/components/studio/studio-provider";
+
+const PROGRESS_INTERVAL_MS = 250;
+
+/** mm:ss, since a raw seconds count means nothing to look at. */
+function formatTime(seconds: number) {
+  if (!Number.isFinite(seconds)) return "0:00";
+  const whole = Math.floor(seconds);
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+}
+
+/** Play/pause, seek and loop for a video or audio file source. */
+function MediaControls({ id }: { id: string }) {
+  const { isMediaPlaying, playMedia, pauseMedia, seekMedia, mediaProgress } = useStudio();
+  const [progress, setProgress] = useState({ current: 0, duration: 0 });
+  const [playing, setPlaying] = useState(false);
+
+  // Syncs with the media element's own clock, which has no React-visible
+  // event for "still playing" — it has to be sampled like the level meters.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setProgress(mediaProgress(id));
+      setPlaying(isMediaPlaying(id));
+    }, PROGRESS_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [id, mediaProgress, isMediaPlaying]);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => (playing ? pauseMedia(id) : playMedia(id))}
+        >
+          {playing ? (
+            <Pause className="mr-2 size-4" aria-hidden="true" />
+          ) : (
+            <Play className="mr-2 size-4" aria-hidden="true" />
+          )}
+          {playing ? "Pause" : "Play"}
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          {formatTime(progress.current)} / {formatTime(progress.duration)}
+        </span>
+      </div>
+      <Slider
+        aria-label="Playback position"
+        value={[progress.current]}
+        min={0}
+        max={progress.duration || 1}
+        step={0.1}
+        onValueChange={([value]) => seekMedia(id, value)}
+      />
+    </div>
+  );
+}
 
 // Everything here can also be done by dragging on the canvas. The numbers are
 // for the cases dragging is bad at: exact alignment, and text.
 function PropertiesPanel() {
-  const { activeScene, selectedSourceId, updateSource } = useStudio();
-  const source = activeScene?.sources.find((item) => item.id === selectedSourceId);
+  const { activeScene, selectedSourceIds, updateSource, croppingSourceId, setCroppingSource } =
+    useStudio();
+  const source =
+    selectedSourceIds.length === 1
+      ? activeScene?.sources.find((item) => item.id === selectedSourceIds[0])
+      : undefined;
+
+  if (selectedSourceIds.length > 1) {
+    return (
+      <section className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
+        {selectedSourceIds.length} sources selected. Drag them together on the canvas, or select
+        one to edit it.
+      </section>
+    );
+  }
 
   if (!source) {
     return (
@@ -31,6 +103,25 @@ function PropertiesPanel() {
       <h2 id="properties-heading" className="text-sm font-semibold uppercase tracking-wide">
         Properties
       </h2>
+
+      {/* Cropping and resizing are easy to get lost in; this is the way back. */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          const fresh = createSource(source.kind, 0);
+          patch({
+            width: fresh.width,
+            height: fresh.height,
+            rotation: 0,
+            ...("crop" in fresh ? { crop: fresh.crop } : {}),
+            ...("flipHorizontal" in fresh ? { flipHorizontal: fresh.flipHorizontal } : {}),
+          });
+        }}
+      >
+        <RotateCcw className="mr-2 size-4" aria-hidden="true" />
+        Reset size and crop
+      </Button>
 
       <div className="space-y-1">
         <Label htmlFor="source-name">Name</Label>
@@ -134,6 +225,100 @@ function PropertiesPanel() {
         </div>
       )}
 
+      {source.kind === "video" && (
+        <div className="space-y-2">
+          <Label>Video file</Label>
+          <UploadButton
+            endpoint="sceneVideoUploader"
+            onClientUploadComplete={(files) => {
+              const url = files[0]?.ufsUrl;
+              if (url) patch({ url });
+            }}
+            onUploadError={(error: Error) => {
+              console.error("Scene video upload failed", error);
+              toast.error("Could not upload that video");
+            }}
+          />
+          {source.url ? (
+            <MediaControls id={source.id} />
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Plays into the scene like a clip in OBS. Its sound joins the mixer.
+            </p>
+          )}
+          <div className="flex items-center justify-between">
+            <Label htmlFor="source-loop">Loop</Label>
+            <Switch
+              id="source-loop"
+              checked={source.loop}
+              onCheckedChange={(checked) => patch({ loop: checked })}
+            />
+          </div>
+        </div>
+      )}
+
+      {source.kind === "audio" && (
+        <div className="space-y-2">
+          <Label>Audio file</Label>
+          <UploadButton
+            endpoint="sceneAudioUploader"
+            onClientUploadComplete={(files) => {
+              const url = files[0]?.ufsUrl;
+              if (url) patch({ url });
+            }}
+            onUploadError={(error: Error) => {
+              console.error("Scene audio upload failed", error);
+              toast.error("Could not upload that audio");
+            }}
+          />
+          {source.url ? (
+            <MediaControls id={source.id} />
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Plays with no picture. Volume and mute live in the audio mixer.
+            </p>
+          )}
+          <div className="flex items-center justify-between">
+            <Label htmlFor="source-loop-audio">Loop</Label>
+            <Switch
+              id="source-loop-audio"
+              checked={source.loop}
+              onCheckedChange={(checked) => patch({ loop: checked })}
+            />
+          </div>
+        </div>
+      )}
+
+      {(source.kind === "camera" ||
+        source.kind === "screen" ||
+        source.kind === "image" ||
+        source.kind === "video") && (
+        <>
+          <Button
+            variant={croppingSourceId === source.id ? "secondary" : "outline"}
+            size="sm"
+            aria-pressed={croppingSourceId === source.id}
+            onClick={() => setCroppingSource(croppingSourceId === source.id ? null : source.id)}
+          >
+            <Crop className="mr-2 size-4" aria-hidden="true" />
+            {croppingSourceId === source.id ? "Done cropping" : "Crop on canvas"}
+          </Button>
+
+          <div className="flex items-center justify-between">
+            <Label htmlFor="source-flip" className="flex items-center gap-2">
+              <FlipHorizontal className="size-4" aria-hidden="true" />
+              Mirror
+            </Label>
+            <Switch
+              id="source-flip"
+              checked={source.flipHorizontal}
+              onCheckedChange={(checked) => patch({ flipHorizontal: checked })}
+            />
+          </div>
+        </>
+      )}
+
+      {source.kind !== "audio" && (
       <fieldset className="grid grid-cols-2 gap-2">
         <legend className="mb-1 text-xs text-muted-foreground">Position and size</legend>
         <div className="space-y-1">
@@ -177,6 +362,7 @@ function PropertiesPanel() {
           />
         </div>
       </fieldset>
+      )}
     </section>
   );
 }

@@ -33,9 +33,18 @@ import {
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 
-import { createScene, deleteScene, listScenes, saveScene } from "@/actions/scene";
+import {
+  createScene,
+  deleteScene,
+  listScenes,
+  renameScene as renameSceneAction,
+  reorderScenes as reorderScenesAction,
+  saveScene,
+} from "@/actions/scene";
 import { createBroadcastToken, setBroadcastLive } from "@/actions/broadcast";
 import AudioMixer, { type MixerChannelState } from "@/lib/studio/audio-mixer";
+import { DEFAULT_QUALITY, QUALITY_PRESETS, type QualityHeight } from "@/lib/studio/quality";
+import { CANVAS_HEIGHT, CANVAS_WIDTH } from "@/lib/studio/scene";
 import {
   createSource,
   type Scene,
@@ -45,6 +54,8 @@ import {
 
 const StudioStage = dynamic(() => import("@/components/studio/studio-stage"), { ssr: false });
 const StudioRoom = dynamic(() => import("@/components/studio/studio-room"), { ssr: false });
+
+type StreamHealth = import("@/components/studio/studio-room").StreamHealth;
 
 // Omit does not distribute over a union on its own: it collapses to the keys
 // every source kind shares, not the ones a text or image source edits.
@@ -61,12 +72,17 @@ interface StudioContextValue {
   retryScenes: () => Promise<void>;
   activeScene: Scene | null;
   activeSceneId: string | null;
-  selectedSourceId: string | null;
+  selectedSourceIds: string[];
+  /** The source whose edges are being dragged in, if any. */
+  croppingSourceId: string | null;
+  setCroppingSource: (id: string | null) => void;
   isDirty: boolean;
   isSaving: boolean;
 
   selectScene: (id: string) => void;
-  selectSource: (id: string | null) => void;
+  /** `additive` extends the selection, the way shift-click does everywhere. */
+  selectSource: (id: string | null, additive?: boolean) => void;
+  selectSources: (ids: string[]) => void;
   addSource: (kind: SourceKind) => void;
   updateSource: (id: string, patch: SourcePatch) => void;
   removeSource: (id: string) => void;
@@ -74,19 +90,46 @@ interface StudioContextValue {
   saveActiveScene: () => Promise<void>;
   addScene: (name: string) => Promise<void>;
   removeScene: (id: string) => Promise<void>;
+  renameScene: (id: string, name: string) => Promise<void>;
+  reorderScenes: (ids: string[]) => Promise<void>;
+  reorderSources: (ids: string[]) => void;
 
   captures: Record<CaptureKind, boolean>;
   cameraElement: HTMLVideoElement | null;
   screenElement: HTMLVideoElement | null;
   toggleCapture: (kind: CaptureKind) => Promise<void>;
 
+  /** Playing video/audio sources, keyed by source id. */
+  mediaElements: Record<string, HTMLVideoElement | HTMLAudioElement>;
+  isMediaPlaying: (id: string) => boolean;
+  playMedia: (id: string) => void;
+  pauseMedia: (id: string) => void;
+  seekMedia: (id: string, seconds: number) => void;
+  mediaProgress: (id: string) => { current: number; duration: number };
+
   channels: MixerChannelState[];
-  levels: Record<string, number>;
+  /** Sampled by the meter itself; state here would re-render the canvas. */
+  getLevels: () => Record<string, number>;
   setChannelVolume: (id: string, volume: number) => void;
   setChannelMuted: (id: string, muted: boolean) => void;
+  hasScreenAudio: boolean;
+
+  quality: QualityHeight;
+  setQuality: (quality: QualityHeight) => void;
+  /** Publish several sizes so viewers can pick. Costs the streamer CPU. */
+  adaptive: boolean;
+  setAdaptive: (adaptive: boolean) => void;
+  /** Send a single full-frame capture untouched, skipping the canvas. */
+  directMode: boolean;
+  setDirectMode: (direct: boolean) => void;
+  getPassthroughTrack: () => MediaStreamTrack | null;
 
   isLive: boolean;
   isStarting: boolean;
+  /** What the browser reports it is actually sending, or null when idle. */
+  health: StreamHealth | null;
+  /** Why nothing is going out, when that is the case. */
+  publishError: string | null;
   goLive: () => Promise<void>;
   stopLive: () => Promise<void>;
 
@@ -131,7 +174,8 @@ function StudioProvider({ children }: { children: ReactNode }) {
   const [isLoadingScenes, setIsLoadingScenes] = useState(false);
   const [scenesError, setScenesError] = useState<string | null>(null);
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
-  const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
+  const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
+  const [croppingSourceId, setCroppingSourceId] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -140,17 +184,27 @@ function StudioProvider({ children }: { children: ReactNode }) {
     screen: false,
     microphone: false,
   });
+  const [hasScreenAudio, setHasScreenAudio] = useState(false);
   const [cameraElement, setCameraElement] = useState<HTMLVideoElement | null>(null);
   const [screenElement, setScreenElement] = useState<HTMLVideoElement | null>(null);
 
   const [channels, setChannels] = useState<MixerChannelState[]>([]);
-  const [levels, setLevels] = useState<Record<string, number>>({});
 
+  const [quality, setQuality] = useState<QualityHeight>(DEFAULT_QUALITY);
+  const [adaptive, setAdaptive] = useState(false);
+  const [directMode, setDirectMode] = useState(false);
+  const [health, setHealth] = useState<StreamHealth | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  const [mediaElements, setMediaElements] = useState<
+    Record<string, HTMLVideoElement | HTMLAudioElement>
+  >({});
 
   const scenesRequestedRef = useRef(false);
+  const mediaElementsRef = useRef<Record<string, HTMLVideoElement | HTMLAudioElement>>({});
+  const activeSceneRef = useRef<Scene | null>(null);
   const streamsRef = useRef<Partial<Record<CaptureKind, MediaStream>>>({});
   const elementsRef = useRef<Partial<Record<CaptureKind, HTMLVideoElement>>>({});
   const mixerRef = useRef<AudioMixer | null>(null);
@@ -171,6 +225,107 @@ function StudioProvider({ children }: { children: ReactNode }) {
 
   const syncChannels = useCallback(() => {
     setChannels(mixerRef.current?.states ?? []);
+  }, []);
+
+  // ── media sources (uploaded video/audio) ────────────────────────────────────
+
+  // Syncs with playing <video>/<audio> elements: created and destroyed as
+  // scene sources are added, removed or re-pointed at a new URL.
+  useEffect(() => {
+    const sources = activeScene?.sources ?? [];
+    const isMediaSource = (
+      source: SceneSource,
+    ): source is Extract<SceneSource, { kind: "video" | "audio" }> =>
+      (source.kind === "video" || source.kind === "audio") && source.url.length > 0;
+
+    const wanted = new Map(sources.filter(isMediaSource).map((source) => [source.id, source]));
+
+    for (const [id, existing] of Object.entries(mediaElementsRef.current)) {
+      const source = wanted.get(id);
+      if (!source || existing.src !== source.url) {
+        existing.pause();
+        existing.src = "";
+        existing.remove();
+        delete mediaElementsRef.current[id];
+        mixer().remove(id);
+      }
+    }
+
+    for (const [id, source] of wanted) {
+      if (mediaElementsRef.current[id]) {
+        // Loop is the one field on an existing element worth re-syncing live.
+        mediaElementsRef.current[id].loop = source.loop;
+        continue;
+      }
+
+      const element = document.createElement(source.kind === "video" ? "video" : "audio");
+      element.src = source.url;
+      element.loop = source.loop;
+      element.crossOrigin = "anonymous";
+      // Muted locally so the streamer does not hear it twice — the mixer
+      // below taps the decoded audio independently of this flag.
+      element.muted = true;
+      if (element instanceof HTMLVideoElement) element.playsInline = true;
+
+      sourcesHostRef.current?.appendChild(element);
+      mediaElementsRef.current[id] = element;
+
+      element.addEventListener(
+        "loadedmetadata",
+        () => {
+          // Not yet in TS's DOM lib on every target, though every evergreen
+          // browser implements it.
+          const capturable = element as HTMLMediaElement & { captureStream?: () => MediaStream };
+          const captured = capturable.captureStream?.();
+          if (captured) mixer().add(id, source.name, captured);
+          syncChannels();
+        },
+        { once: true },
+      );
+    }
+
+    setMediaElements({ ...mediaElementsRef.current });
+  }, [activeScene, mixer, syncChannels]);
+
+  // Syncs with the document: elements created above must not outlive the
+  // provider, or a clip would keep playing after the studio unmounts.
+  useEffect(
+    () => () => {
+      Object.entries(mediaElementsRef.current).forEach(([id, element]) => {
+        element.pause();
+        element.src = "";
+        element.remove();
+        mixer().remove(id);
+      });
+      mediaElementsRef.current = {};
+    },
+    [mixer],
+  );
+
+  const playMedia = useCallback((id: string) => {
+    void mediaElementsRef.current[id]?.play().catch((error: unknown) => {
+      console.error("Could not play this clip", error);
+      toast.error("Could not play this clip");
+    });
+  }, []);
+
+  const pauseMedia = useCallback((id: string) => {
+    mediaElementsRef.current[id]?.pause();
+  }, []);
+
+  const seekMedia = useCallback((id: string, seconds: number) => {
+    const element = mediaElementsRef.current[id];
+    if (element) element.currentTime = seconds;
+  }, []);
+
+  const isMediaPlaying = useCallback((id: string) => {
+    const element = mediaElementsRef.current[id];
+    return Boolean(element && !element.paused && !element.ended);
+  }, []);
+
+  const mediaProgress = useCallback((id: string) => {
+    const element = mediaElementsRef.current[id];
+    return { current: element?.currentTime ?? 0, duration: element?.duration ?? 0 };
   }, []);
 
   // ── scenes ────────────────────────────────────────────────────────────────
@@ -197,7 +352,7 @@ function StudioProvider({ children }: { children: ReactNode }) {
       const source = createSource(kind, activeScene?.sources.length ?? 0);
 
       patchActiveScene((scene) => ({ ...scene, sources: [...scene.sources, source] }));
-      setSelectedSourceId(source.id);
+      setSelectedSourceIds([source.id]);
     },
     [patchActiveScene, activeScene],
   );
@@ -222,7 +377,7 @@ function StudioProvider({ children }: { children: ReactNode }) {
         ...scene,
         sources: scene.sources.filter((source) => source.id !== id),
       }));
-      setSelectedSourceId((current) => (current === id ? null : current));
+      setSelectedSourceIds((current) => current.filter((selected) => selected !== id));
     },
     [patchActiveScene],
   );
@@ -273,7 +428,7 @@ function StudioProvider({ children }: { children: ReactNode }) {
         { id, name, position: current.length, sources: createStarterSources() },
       ]);
       setActiveSceneId(id);
-      setSelectedSourceId(null);
+      setSelectedSourceIds([]);
     } catch (error) {
       console.error("Could not create a scene", error);
       toast.error("Could not create that scene");
@@ -301,9 +456,75 @@ function StudioProvider({ children }: { children: ReactNode }) {
     [activeSceneId],
   );
 
+  const renameScene = useCallback(async (id: string, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    // Applied at once and persisted behind it: a name that lagged a round trip
+    // behind the keyboard would feel broken.
+    setScenes((current) =>
+      current.map((scene) => (scene.id === id ? { ...scene, name: trimmed } : scene)),
+    );
+
+    try {
+      await renameSceneAction(id, trimmed);
+    } catch (error) {
+      console.error("Could not rename the scene", error);
+      toast.error("Could not rename that scene");
+    }
+  }, []);
+
+  const reorderScenes = useCallback(async (ids: string[]) => {
+    setScenes((current) => {
+      const byId = new Map(current.map((scene) => [scene.id, scene]));
+      return ids.flatMap((id, position) => {
+        const scene = byId.get(id);
+        return scene ? [{ ...scene, position }] : [];
+      });
+    });
+
+    try {
+      await reorderScenesAction(ids);
+    } catch (error) {
+      console.error("Could not reorder your scenes", error);
+      toast.error("Could not save the new order");
+    }
+  }, []);
+
+  /** Source order is z-order, and is saved with the scene rather than alone. */
+  const reorderSources = useCallback(
+    (ids: string[]) => {
+      patchActiveScene((scene) => {
+        const byId = new Map(scene.sources.map((source) => [source.id, source]));
+        return {
+          ...scene,
+          sources: ids.flatMap((id) => {
+            const source = byId.get(id);
+            return source ? [source] : [];
+          }),
+        };
+      });
+    },
+    [patchActiveScene],
+  );
+
   const selectScene = useCallback((id: string) => {
     setActiveSceneId(id);
-    setSelectedSourceId(null);
+    setSelectedSourceIds([]);
+  }, []);
+
+  const selectSource = useCallback((id: string | null, additive = false) => {
+    if (!id) {
+      setSelectedSourceIds([]);
+      return;
+    }
+
+    setSelectedSourceIds((current) => {
+      if (!additive) return [id];
+      return current.includes(id)
+        ? current.filter((selected) => selected !== id)
+        : [...current, id];
+    });
   }, []);
 
   const loadScenes = useCallback(async () => {
@@ -350,6 +571,8 @@ function StudioProvider({ children }: { children: ReactNode }) {
       mixerRef.current?.remove(kind);
       syncChannels();
 
+      if (kind === "screen") setHasScreenAudio(false);
+
       if (kind === "camera") setCameraElement(null);
       if (kind === "screen") setScreenElement(null);
       setCaptures((current) => ({ ...current, [kind]: false }));
@@ -375,10 +598,12 @@ function StudioProvider({ children }: { children: ReactNode }) {
               kind === "camera"
                 ? { video: { width: 1280, height: 720 } }
                 : {
+                    // Suppression and gain control are tuned for a call and
+                    // thin a voice out. Echo cancellation stays, for feedback.
                     audio: {
                       echoCancellation: true,
-                      noiseSuppression: true,
-                      autoGainControl: true,
+                      noiseSuppression: false,
+                      autoGainControl: false,
                       channelCount: 1,
                     },
                   },
@@ -395,6 +620,19 @@ function StudioProvider({ children }: { children: ReactNode }) {
       await mixer().resume();
       mixer().add(kind, kind === "microphone" ? "Microphone" : "Screen audio", stream);
       syncChannels();
+
+      if (kind === "screen") {
+        const carriesAudio = stream.getAudioTracks().length > 0;
+        setHasScreenAudio(carriesAudio);
+
+        // Windows offers no audio when a whole screen is shared, so a silent
+        // stream is usually a choice in the picker rather than a fault.
+        if (!carriesAudio) {
+          toast.info(
+            "This share has no sound. To include it, share a Chrome tab and tick \"Also share tab audio\".",
+          );
+        }
+      }
 
       // Ending a share from the browser's own banner must update the studio.
       stream.getVideoTracks()[0]?.addEventListener("ended", () => stopCapture(kind));
@@ -441,14 +679,19 @@ function StudioProvider({ children }: { children: ReactNode }) {
     [syncChannels],
   );
 
-  // Syncs with the Web Audio analysers, which have no event to subscribe to —
-  // a level meter has to be sampled. Idle when nothing is captured.
-  useEffect(() => {
-    if (channels.length === 0) return;
+  const getLevels = useCallback(() => mixerRef.current?.levels() ?? {}, []);
 
-    const timer = setInterval(() => setLevels(mixerRef.current?.levels() ?? {}), 100);
-    return () => clearInterval(timer);
-  }, [channels.length]);
+  // A room can drop out from under us — a sleeping laptop, a network change,
+  // a starved tab. Without this the studio went on claiming to be live.
+  const handleDisconnected = useCallback(() => {
+    setToken(null);
+    setIsLive(false);
+    toast.error("The broadcast disconnected. Your setup is intact — press Go live to resume.");
+
+    void setBroadcastLive(false).catch((error: unknown) => {
+      console.error("Could not clear the live status after a disconnect", error);
+    });
+  }, []);
 
   // ── going live ────────────────────────────────────────────────────────────
 
@@ -482,6 +725,8 @@ function StudioProvider({ children }: { children: ReactNode }) {
   const stopLive = useCallback(async () => {
     setToken(null);
     setIsLive(false);
+    setPublishError(null);
+    setHealth(null);
 
     try {
       await setBroadcastLive(false);
@@ -490,6 +735,12 @@ function StudioProvider({ children }: { children: ReactNode }) {
       toast.error("Your channel may still show as live");
     }
   }, []);
+
+  // Syncs with the passthrough check, which must read the current scene
+  // without depending on it, or every scene edit would rebuild the publisher.
+  useEffect(() => {
+    activeSceneRef.current = activeScene;
+  }, [activeScene]);
 
   // Syncs with the page lifecycle: closing the tab gives no chance to await an
   // action, so this is best effort and the LiveKit webhook is the real backstop.
@@ -521,6 +772,39 @@ function StudioProvider({ children }: { children: ReactNode }) {
     outputCanvasRef.current = canvas;
   }, []);
 
+  // A scene that is one full-frame camera or screen has nothing to composite,
+  // so its capture goes straight out: no canvas, no re-encode, native size.
+  const getPassthroughTrack = useCallback(() => {
+    const scene = activeSceneRef.current;
+    const visible = scene?.sources.filter((source) => source.visible) ?? [];
+    const [only] = visible;
+
+    if (visible.length !== 1 || !only) return null;
+    if (only.kind !== "camera" && only.kind !== "screen") return null;
+
+    const fillsFrame =
+      only.x <= 2 &&
+      only.y <= 2 &&
+      only.width >= CANVAS_WIDTH - 4 &&
+      only.height >= CANVAS_HEIGHT - 4 &&
+      only.rotation === 0;
+
+    const uncropped =
+      only.crop.top === 0 &&
+      only.crop.right === 0 &&
+      only.crop.bottom === 0 &&
+      only.crop.left === 0;
+
+    if (!fillsFrame || !uncropped) return null;
+
+    return streamsRef.current[only.kind]?.getVideoTracks()[0] ?? null;
+  }, []);
+
+  // Stable by construction: as inline arrows these were new every render, so
+  // the publisher re-ran and tore the live tracks down on every state change.
+  const getOutputCanvas = useCallback(() => outputCanvasRef.current, []);
+  const getAudioStream = useCallback(() => mixerRef.current?.outputStream ?? null, []);
+
   // Moved in the DOM rather than re-rendered: a new <canvas> would strand the
   // MediaStream already published to viewers. A canvas survives being moved.
   const hostStage = useCallback((slot: HTMLElement | null) => {
@@ -550,11 +834,14 @@ function StudioProvider({ children }: { children: ReactNode }) {
       retryScenes: loadScenes,
       activeScene,
       activeSceneId,
-      selectedSourceId,
+      selectedSourceIds,
+      croppingSourceId,
+      setCroppingSource: setCroppingSourceId,
       isDirty,
       isSaving,
       selectScene,
-      selectSource: setSelectedSourceId,
+      selectSource,
+      selectSources: setSelectedSourceIds,
       addSource,
       updateSource,
       removeSource,
@@ -562,24 +849,44 @@ function StudioProvider({ children }: { children: ReactNode }) {
       saveActiveScene,
       addScene,
       removeScene,
+      renameScene,
+      reorderScenes,
+      reorderSources,
       captures,
       cameraElement,
       screenElement,
+      mediaElements,
+      isMediaPlaying,
+      playMedia,
+      pauseMedia,
+      seekMedia,
+      mediaProgress,
       toggleCapture,
+      quality,
+      setQuality,
+      adaptive,
+      setAdaptive,
+      directMode,
+      setDirectMode,
+      getPassthroughTrack,
       channels,
-      levels,
+      getLevels,
       setChannelVolume,
       setChannelMuted,
+      hasScreenAudio,
       isLive,
       isStarting,
+      health,
+      publishError,
       goLive,
       stopLive,
       registerOutputCanvas,
-      getOutputCanvas: () => outputCanvasRef.current,
-      getAudioStream: () => mixerRef.current?.outputStream ?? null,
+      getOutputCanvas,
+      getAudioStream,
       hostStage,
     }),
     [
+      getLevels,
       scenes,
       isLoadingScenes,
       scenesError,
@@ -587,10 +894,12 @@ function StudioProvider({ children }: { children: ReactNode }) {
       loadScenes,
       activeScene,
       activeSceneId,
-      selectedSourceId,
+      selectedSourceIds,
+      croppingSourceId,
       isDirty,
       isSaving,
       selectScene,
+      selectSource,
       addSource,
       updateSource,
       removeSource,
@@ -598,19 +907,36 @@ function StudioProvider({ children }: { children: ReactNode }) {
       saveActiveScene,
       addScene,
       removeScene,
+      renameScene,
+      reorderScenes,
+      reorderSources,
       captures,
       cameraElement,
       screenElement,
+      mediaElements,
+      isMediaPlaying,
+      playMedia,
+      pauseMedia,
+      seekMedia,
+      mediaProgress,
       toggleCapture,
+      quality,
+      adaptive,
+      directMode,
+      getPassthroughTrack,
       channels,
-      levels,
       setChannelVolume,
       setChannelMuted,
+      hasScreenAudio,
       isLive,
       isStarting,
+      health,
+      publishError,
       goLive,
       stopLive,
       registerOutputCanvas,
+      getOutputCanvas,
+      getAudioStream,
       hostStage,
     ],
   );
@@ -641,7 +967,18 @@ function StudioProvider({ children }: { children: ReactNode }) {
           </div>
         ) : null}
       </div>
-      {isLive && token ? <StudioRoom token={token} /> : null}
+      {isLive && token && (
+        <StudioRoom
+          token={token}
+          maxBitrate={QUALITY_PRESETS[quality].maxBitrate}
+          adaptive={adaptive}
+          directMode={directMode}
+          getPassthroughTrack={getPassthroughTrack}
+          onHealth={setHealth}
+          onPublishError={setPublishError}
+          onDisconnected={handleDisconnected}
+        />
+      )}
     </StudioContext.Provider>
   );
 }
