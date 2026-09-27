@@ -1,388 +1,199 @@
 # OpenStream
 
-A full-featured live streaming platform built with modern web technologies, featuring real-time video streaming, interactive chat, user authentication, and comprehensive stream management.
+A live streaming platform in the shape of Twitch: browse live channels, watch with real-time
+chat, follow and block, and a creator dashboard for going live from either OBS or straight from
+the browser — including an in-browser scene compositor for mixing camera, screen and overlays
+into a single output, similar in spirit to OBS Studio.
 
-![Next.js](https://img.shields.io/badge/Next.js-15-black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
-![React](https://img.shields.io/badge/React-19-61DAFB)
-![Prisma](https://img.shields.io/badge/Prisma-6-2D3748)
-![LiveKit](https://img.shields.io/badge/LiveKit-Enabled-00A1FF)
+**Live:** [open-stream.codesofakash.in](https://open-stream.codesofakash.in)
 
-## ✨ Features
+## Overview
 
-### Streaming & Video
-- 🎥 Real-time video streaming powered by LiveKit
-- 📺 Live/offline stream status detection
-- 🎬 Custom thumbnail uploads for streams
-- 📊 Stream viewer count and metrics
-- 🔄 Auto-refresh live streams
+OpenStream is a full-stack Next.js application built around [LiveKit](https://livekit.io) for
+real-time video and [Sanity](https://sanity.io) for editorial content. The engineering focus is
+on two things most streaming-platform clones skip: making the free tier of a WebRTC SFU actually
+usable for several concurrent broadcasters, and giving a browser-only streamer real OBS-style
+control over their output rather than a single raw camera feed.
 
-### User Management
-- 🔐 Secure authentication via Clerk
-- 👤 User profiles with customizable bios
-- 🖼️ Profile picture support
-- 🎮 Streamer dashboard for content creators
+Two ways to go live are both first-class: an OBS/RTMP-WHIP path through LiveKit ingress for
+anyone with existing broadcast software, and a browser-only path where the streamer joins their
+own room as a publishing participant — no ingress, no transcoding minutes spent, which matters
+because LiveKit Cloud's free tier caps concurrent ingresses but not concurrent participants.
 
-### Social Features
-- ❤️ Follow/unfollow streamers
-- 🚫 Block/unblock users
-- 💬 Real-time chat with moderation controls
-- 👥 Community sidebar showing followed channels
-- 🔍 Search users and streams
+## Features
 
-### Stream Management
-- 🎛️ Dashboard for stream configuration
-- 🗂️ Category selection (e.g., Gaming, Just Chatting, Music)
-- 🏷️ Tag system for stream categorization
-- ⚙️ Chat settings (enable/disable, followers-only, delay)
-- 🔑 Stream key management with copy functionality
-- 📡 RTMP/WHIP ingress configuration
+**Streaming**
+- Dual publishing paths: OBS via RTMP/WHIP ingress, or camera/screen directly from the browser
+- A canvas-based scene compositor ("Studio") for browser streamers — camera, screen, image, text,
+  colour, and video/audio-file sources composited onto one output with drag/resize/rotate,
+  interactive on-canvas cropping, a mirror toggle, snapping alignment guides, and multi-select
+- A "direct mode" that skips compositing entirely when the scene is a single full-frame source,
+  publishing the raw capture at native resolution instead of a re-encoded canvas
+- Six selectable output resolutions (360p–4K) and an optional simulcast toggle so viewers can pick
+  a lower-bandwidth stream
+- A live stream-health readout (resolution, bitrate, fps, packet loss, round-trip time) that
+  diagnoses *why* quality dropped — CPU, upload bandwidth, or connection instability — rather than
+  just showing raw numbers
+- A Web Audio mixer with a real-time level meter, per-source gain and mute, and a limiter across
+  the mixed output, so a shared tab's audio and the microphone are combined into one track
+  correctly instead of colliding as two competing tracks
+- Persistent broadcasts that survive client-side navigation — going live doesn't pin the streamer
+  to one page
 
-### UI/UX
-- 🌓 Dark/Light theme support
-- 📱 Fully responsive design
-- ⚡ Optimized performance with Next.js 15
-- 🎨 Modern UI with Radix UI and Tailwind CSS
-- 🎭 Smooth animations and transitions
+**Platform**
+- Real-time chat over LiveKit data channels, with slow-mode, followers-only, and enable/disable
+  controls
+- Follow / unfollow and block / unblock
+- Full-text search across streams and users, category and tag-based discovery
+- A creator dashboard: stream key management, chat settings, community/blocked-user management
 
-### Additional Features
-- 📧 Suggestion system for user feedback
-- 🔔 Toast notifications for user actions
-- 🎯 SEO-optimized with metadata and sitemaps
-- 🤖 Webhook support for external integrations
-- 📄 Legal pages (About, Privacy, Terms, Contact)
+**Content & SEO**
+- Editorial pages (About, Contact, Privacy, Terms) served from an embedded Sanity Studio, with
+  static-constants as the fallback when Sanity isn't configured
+- `sitemap.xml`, `robots.txt`, `llms.txt`, and a JSON `ai-catalog.json` for AI-crawler/agentic
+  discoverability
+- Consent-gated PostHog analytics — nothing loads until the visitor accepts
 
-## 🚀 Tech Stack
+## Tech Stack
 
-### Frontend
-- **Framework:** Next.js 15 (App Router)
-- **Language:** TypeScript
-- **UI Library:** React 19
-- **Styling:** Tailwind CSS 4
-- **UI Components:** Radix UI, shadcn/ui
-- **State Management:** Zustand
-- **Theme:** next-themes
+**Frontend**
+Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, Radix UI / shadcn/ui, Zustand,
+Konva / react-konva (the Studio canvas), dnd-kit (drag-to-reorder scenes and sources)
 
-### Backend
-- **Database:** PostgreSQL (via Supabase)
-- **ORM:** Prisma 6
-- **Authentication:** Clerk
-- **Live Streaming:** LiveKit (Server SDK & Client SDK)
-- **File Uploads:** UploadThing
+**Backend**
+Next.js Server Actions, LiveKit Server SDK (tokens, ingress, webhooks), Clerk webhooks (via Svix)
 
-### Additional Tools
-- **Webhooks:** Svix (for Clerk webhooks)
-- **Tunneling:** ngrok (for local development)
-- **Notifications:** Sonner (toast notifications)
-- **Icons:** Lucide React
-- **Date Utilities:** date-fns
+**Database**
+PostgreSQL via Prisma ORM with the `@prisma/adapter-pg` driver adapter — works against Neon,
+Supabase, Railway, or any standard Postgres host
 
-## 📋 Prerequisites
+**CMS**
+Sanity (embedded Studio, GROQ queries, live preview / draft mode)
 
-Before you begin, ensure you have the following installed:
-- **Node.js** 20.x or higher
-- **npm** or **pnpm** or **yarn**
-- **PostgreSQL** database (or Supabase account)
-- **Git**
+**Real-time**
+LiveKit (SFU, RTMP/WHIP ingress, browser participant publishing, data-channel chat), the Web
+Audio API (client-side mixing)
 
-You'll also need accounts for:
-- [Clerk](https://clerk.dev) - Authentication
-- [LiveKit Cloud](https://livekit.io) - Video streaming
-- [UploadThing](https://uploadthing.com) - File uploads
-- [Supabase](https://supabase.com) or PostgreSQL provider - Database
+**Authentication**
+Clerk
 
-## 🛠️ Installation & Setup
+**Infrastructure / Deployment**
+Vercel (frontend), LiveKit Cloud, UploadThing (file uploads), PostHog + Vercel Speed Insights
+(analytics)
 
-### 1. Clone the Repository
+## Architecture
 
-```bash
-git clone https://github.com/yourusername/openstream.git
-cd openstream
+Two independent publishing paths converge on the same LiveKit room:
+
+1. **OBS / ingress path** — a stream key is generated server-side via the LiveKit Server SDK; OBS
+   pushes RTMP or WHIP to LiveKit's ingress, which LiveKit transcodes and republishes into the
+   room. This is the expensive path (transcode minutes are capped on the free tier), used for
+   anyone with existing broadcast tooling.
+2. **Browser path** — the streamer's own tab joins the room as an ordinary publishing participant.
+   No ingress, no transcoding — this is what makes several concurrent streamers workable on a
+   free LiveKit Cloud plan, since the cap that matters there is on ingresses, not participants.
+
+For the browser path, the Studio composites every enabled source onto an off-screen `<canvas>` at
+30fps and publishes `canvas.captureStream()` as the outgoing video track — so what the streamer
+sees in the editor is exactly what viewers receive, not a separate preview that can drift from
+the real output. When the active scene is a single full-frame source, that step is skipped and
+the raw MediaStream track publishes directly, avoiding the CPU cost of compositing something
+there's nothing to composite.
+
+A LiveKit webhook (`/api/webhooks/livekit`) keeps `Stream.isLive` in sync with what LiveKit
+actually reports, so a browser tab closing without a clean disconnect doesn't leave a channel
+stuck showing as live.
+
+## Project Structure
+
+```
+app/
+├── (auth)/              # Clerk sign-in / sign-up
+├── (browse)/             # Public: home feed, channel pages, search
+├── (dashboard)/           # Creator dashboard: stream, studio, keys, chat, community
+├── (legal)/               # Sanity-backed About/Contact/Privacy/Terms
+├── api/webhooks/          # Clerk + LiveKit webhooks
+└── studio/                 # Embedded Sanity Studio
+
+actions/                  # Server actions (writes)
+lib/                       # Service layer (reads), Sanity client, Studio domain logic
+components/
+├── studio/                # The canvas compositor and its panels
+├── stream-player/          # The viewer-facing video player
+└── ui/                     # shadcn/ui primitives
+
+prisma/                    # Schema (User, Stream, Follow, Block, Scene, …) and seed script
+sanity/                    # Schemas, GROQ queries, SEO mapping
 ```
 
-### 2. Install Dependencies
+## Getting Started
+
+### Prerequisites
+
+- Node.js 20+
+- A PostgreSQL database
+- Accounts: [Clerk](https://clerk.dev), [LiveKit Cloud](https://livekit.io),
+  [UploadThing](https://uploadthing.com) — [Sanity](https://sanity.io) is optional, the app
+  renders without it
+
+### Install
 
 ```bash
 npm install
-# or
-pnpm install
-# or
-yarn install
 ```
 
-### 3. Environment Variables
+### Environment variables
 
-Create a `.env` file in the root directory and add the following variables:
+Copy `.env.example` to `.env` and fill in:
 
-```env
-# Clerk Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
-CLERK_SECRET_KEY=your_clerk_secret_key
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/
-NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/
-CLERK_WEBHOOK_SECRET=your_clerk_webhook_secret
-
-# Database (Supabase PostgreSQL)
-DATABASE_URL="your_database_pooling_url"
-DIRECT_DATABASE_URL="your_direct_database_url"
-
-# LiveKit
-LIVEKIT_API_URL=your_livekit_api_url
-LIVEKIT_API_KEY=your_livekit_api_key
-LIVEKIT_API_SECRET=your_livekit_api_secret
-NEXT_PUBLIC_LIVEKIT_WS_URL=your_livekit_websocket_url
-
-# UploadThing
-UPLOADTHING_TOKEN=your_uploadthing_token
+```
+NEXT_PUBLIC_SITE_URL
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+CLERK_SECRET_KEY
+CLERK_WEBHOOK_SECRET
+DATABASE_URL
+DIRECT_DATABASE_URL
+LIVEKIT_API_URL
+LIVEKIT_API_KEY
+LIVEKIT_API_SECRET
+NEXT_PUBLIC_LIVEKIT_WS_URL
+UPLOADTHING_TOKEN
+NEXT_PUBLIC_EMAILJS_SERVICE_ID
+NEXT_PUBLIC_EMAILJS_TEMPLATE_ID
+NEXT_PUBLIC_EMAILJS_PUBLIC_KEY
+NEXT_PUBLIC_SANITY_PROJECT_ID      # optional — CMS reads return empty without it
+NEXT_PUBLIC_SANITY_DATASET
+NEXT_PUBLIC_SANITY_API_VERSION
+SANITY_API_READ_TOKEN
 ```
 
-#### How to Get Environment Variables:
+Full descriptions and where to get each value are in `.env.example`.
 
-**Clerk:**
-1. Sign up at [clerk.dev](https://clerk.dev)
-2. Create a new application
-3. Copy the API keys from the dashboard
-4. Set up a webhook endpoint and get the webhook secret
-
-**Supabase:**
-1. Create a project at [supabase.com](https://supabase.com)
-2. Go to Project Settings → Database
-3. Copy the Connection String (pooling mode for `DATABASE_URL`)
-4. Copy the Direct Connection URL for `DIRECT_DATABASE_URL`
-
-**LiveKit:**
-1. Sign up at [livekit.io](https://livekit.io)
-2. Create a new project
-3. Copy API URL, API Key, and API Secret from settings
-4. WebSocket URL is typically `wss://your-project.livekit.cloud`
-
-**UploadThing:**
-1. Sign up at [uploadthing.com](https://uploadthing.com)
-2. Create a new app
-3. Generate and copy the token
-
-### 4. Set Up Database
-
-Run Prisma migrations to set up your database schema:
+### Database
 
 ```bash
-npx prisma generate
 npx prisma db push
+npm run seed   # optional — sample categories, tags, users and streams
 ```
 
-### 5. Seed Database (Optional)
-
-Populate your database with sample data:
-
-```bash
-npm run seed
-```
-
-This will create:
-- Sample categories (Gaming, IRL, Music, etc.)
-- Tags for stream categorization
-- Sample users and streams
-- Follow relationships
-
-### 6. Run Development Server
+### Run
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+## Deployment
 
-### 7. Set Up Webhooks (for local development)
+Deployed on Vercel from the `main` branch. `npm run build` runs `prisma db push` ahead of
+`next build`, so schema changes ship with the code that depends on them. Production Clerk keys
+(not `pk_test_`/`sk_test_`) are required — test-instance keys force `Cache-Control: no-store` on
+every response and break indexing.
 
-To receive Clerk webhooks locally, you need to expose your local server:
+## Current Status
 
-```bash
-npx ngrok http 3000
-```
-
-Then update your Clerk webhook endpoint with the ngrok URL:
-`https://your-ngrok-url.ngrok.io/api/webhooks/clerk`
-
-## 📂 Project Structure
-
-```
-openstream/
-├── actions/              # Server actions
-│   ├── block.ts         # Block/unblock users
-│   ├── follow.ts        # Follow/unfollow logic
-│   ├── ingress.ts       # Stream ingress configuration
-│   ├── stream.ts        # Stream management
-│   ├── token.ts         # LiveKit token generation
-│   └── user.ts          # User operations
-├── app/                 # Next.js App Router
-│   ├── (auth)/         # Authentication pages
-│   ├── (browse)/       # Public browsing pages
-│   ├── (dashboard)/    # Creator dashboard
-│   ├── (legal)/        # Legal pages
-│   └── api/            # API routes
-├── components/          # React components
-│   ├── ui/             # Reusable UI components (shadcn)
-│   └── stream-player/  # Stream player components
-├── hooks/              # Custom React hooks
-├── lib/                # Utility functions and services
-│   ├── auth-service.ts      # Authentication utilities
-│   ├── block-service.ts     # Block management
-│   ├── category-service.ts  # Category operations
-│   ├── db.ts                # Prisma client
-│   ├── feed-service.ts      # Feed generation
-│   ├── follow-service.ts    # Follow operations
-│   ├── stream-service.ts    # Stream operations
-│   └── user-service.ts      # User operations
-├── prisma/             # Database schema and migrations
-│   ├── schema.prisma   # Database schema
-│   └── seed.ts         # Database seeding script
-├── public/             # Static assets
-├── store/              # Zustand state management
-└── scripts/            # Utility scripts
-```
-
-## 🎯 Key Features Explained
-
-### Authentication Flow
-- Users authenticate via Clerk (email, OAuth providers)
-- Webhooks sync user data to PostgreSQL database
-- Session management handled automatically by Clerk
-
-### Streaming Architecture
-1. Streamers generate an ingress (RTMP/WHIP) via LiveKit
-2. Stream key is used in OBS or similar software
-3. LiveKit handles transcoding and distribution
-4. Viewers connect via WebRTC for low-latency playback
-
-### Chat System
-- Real-time chat powered by LiveKit's data channels
-- Moderation controls (enable/disable, followers-only, delay)
-- Community list shows active chatters
-
-### Search & Discovery
-- Full-text search across users and streams
-- Category filtering
-- Tag-based discovery
-- Recommended streamers based on follows
-
-## 🚀 Deployment
-
-### Deploy to Vercel
-
-The easiest way to deploy is via Vercel:
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
-
-1. Push your code to GitHub
-2. Import the repository in Vercel
-3. Add all environment variables
-4. Deploy!
-
-### Production Checklist
-
-- [ ] Set up production database (Supabase, Railway, Neon, etc.)
-- [ ] Configure production LiveKit project
-- [ ] Set up production Clerk application
-- [ ] Add production environment variables to hosting platform
-- [ ] Run database migrations: `npx prisma migrate deploy`
-- [ ] Configure proper domain for webhooks
-- [ ] Enable production mode in all third-party services
-- [ ] Test authentication flow end-to-end
-- [ ] Verify streaming functionality
-- [ ] Test file uploads
-
-### Environment Variables for Production
-
-Make sure all environment variables are set in your hosting platform's dashboard. Do not commit `.env` files to version control.
-
-## 🧪 Development Workflow
-
-### Running in Development Mode
-
-```bash
-npm run dev
-```
-
-### Building for Production
-
-```bash
-npm run build
-npm start
-```
-
-### Linting
-
-```bash
-npm run lint
-```
-
-### Database Operations
-
-```bash
-# Generate Prisma Client
-npx prisma generate
-
-# Push schema changes
-npx prisma db push
-
-# Open Prisma Studio (Database GUI)
-npx prisma studio
-
-# Create a migration
-npx prisma migrate dev --name your_migration_name
-
-# Seed database
-npm run seed
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please check out our [Contributing Guidelines](CONTRIBUTING.md) for details on how to get started.
-
-### Quick Start for Contributors
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes
-4. Commit with conventional commits: `git commit -m 'feat: add amazing feature'`
-5. Push to your fork: `git push origin feature/amazing-feature`
-6. Open a Pull Request
-
-## 📝 License
-
-This project is open source and available under the [MIT License](LICENSE).
-
-## 🙏 Acknowledgments
-
-- [Next.js](https://nextjs.org/) - React framework
-- [LiveKit](https://livekit.io/) - Real-time video infrastructure
-- [Clerk](https://clerk.dev/) - Authentication
-- [Prisma](https://www.prisma.io/) - Database ORM
-- [Radix UI](https://www.radix-ui.com/) - UI primitives
-- [shadcn/ui](https://ui.shadcn.com/) - UI components
-- [Tailwind CSS](https://tailwindcss.com/) - Styling
-
-## 📧 Contact & Support
-
-- Create an issue for bug reports or feature requests
-- Submit suggestions via the in-app suggestion system
-- For security issues, please email: security@yourapp.com
-
-## 🗺️ Roadmap
-
-- [ ] Mobile apps (React Native)
-- [ ] VOD (Video on Demand) support
-- [ ] Clips and highlights
-- [ ] Subscriber badges and emotes
-- [ ] Analytics dashboard
-- [ ] Multi-language support
-- [ ] Advanced moderation tools
-- [ ] Raid and host features
-
----
-
-**Built with ❤️ by [Your Name](https://github.com/yourusername)**
-
-Star ⭐ this repository if you find it helpful!
+Actively developed. The core platform — auth, follow/block, chat, search, OBS ingress streaming,
+and browser publishing — is stable and deployed. The Studio scene compositor is functional and
+deployed but is CPU-intensive by nature (it's compositing and re-encoding a video frame in real
+time in the browser); the in-app diagnostics exist specifically to make that cost visible rather
+than to hide it, and Direct Mode exists as the lighter-weight path for the common single-source
+case.
